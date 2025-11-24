@@ -3,6 +3,7 @@ import json
 import os
 import re
 import sys
+import subprocess
 from typing import Dict, Any, List, Tuple, Optional, Iterable
 
 
@@ -21,13 +22,13 @@ def parse_schema_id(id_str: str) -> Tuple[str, str, str]:
 
 
 def normalize_node_id(domain: str, model_name: str) -> str:
-    """Convert domain + model name into a Mermaid-safe node ID."""
+    """Convert domain + model name into a Graphviz-safe node ID."""
     node = f"{domain}_{model_name}"
     return re.sub(r"[^A-Za-z0-9_]", "_", node)
 
 
 def extract_schema_meta(schema: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Extract metadata such as domain, model name, Mermaid ID."""
+    """Extract metadata such as domain, model name, node ID."""
     id_str = schema.get("$id") or schema.get("id")
     if not id_str:
         return None
@@ -59,15 +60,19 @@ def guess_property_type(prop_schema: Dict[str, Any]) -> str:
     return "any"
 
 
-def schemas_to_mermaid(schemas: List[Dict[str, Any]]) -> str:
-    """
-    Render a Mermaid flowchart in TB orientation, ER-style:
+def escape_label(s: str) -> str:
+    """Escape a string for use inside a Graphviz label."""
+    return s.replace("\\", "\\\\").replace('"', '\\"')
 
-    - flowchart TB (top to bottom)
-    - subgraph per domain (domain box)
-    - node per schema, label = title + attributes listed (ER entity)
-    - $ref properties => edges (A --> B : propName)
-    - domain-level anchors + edges to push layout vertical
+
+def schemas_to_dot(schemas: List[Dict[str, Any]]) -> str:
+    """
+    Render a Graphviz DOT digraph:
+
+    - rankdir=TB (top to bottom)
+    - subgraph cluster_<domain> per domain (domain box)
+    - node per schema, record-shaped, label = Title | attributes
+    - $ref properties => edges (src -> tgt [label="prop"])
     - entities with at least one resolvable $ref are styled as red boxes
     """
     meta_by_id: Dict[str, Dict[str, Any]] = {}
@@ -90,20 +95,21 @@ def schemas_to_mermaid(schemas: List[Dict[str, Any]]) -> str:
     }
 
     lines: List[str] = []
-    lines.append("flowchart TB")  # top-to-bottom
+    lines.append("digraph SchemaGraph {")
+    lines.append('  graph [rankdir=TB, fontsize=10, fontname="Helvetica"];')
+    lines.append('  node  [shape=record, fontsize=9, fontname="Helvetica"];')
+    lines.append('  edge  [fontsize=8, fontname="Helvetica"];')
 
-    domain_anchors: Dict[str, str] = {}
+    # Keep track of nodes that should be highlighted (have resolvable $ref)
     ref_highlight_nodes: set[str] = set()
 
-    # Emit subgraphs, domain anchors, and ER-style entity boxes
+    # Emit clusters and nodes
     for domain, metas in sorted(domains.items(), key=lambda kv: kv[0]):
-        group_id = re.sub(r"[^A-Za-z0-9_]", "_", domain)
-        anchor_id = f"{group_id}_anchor"
-        domain_anchors[domain] = anchor_id
-
-        lines.append("")
-        lines.append(f"  subgraph {group_id} [{domain}]")
-        lines.append(f'    {anchor_id}["{domain}"]')
+        cluster_id = "cluster_" + re.sub(r"[^A-Za-z0-9_]", "_", domain)
+        lines.append(f'  subgraph {cluster_id} {{')
+        lines.append('    style=rounded;')
+        lines.append('    color="#cccccc";')
+        lines.append(f'    label="{escape_label(domain)}";')
 
         for meta in metas:
             node_id = meta["node_id"]
@@ -112,15 +118,12 @@ def schemas_to_mermaid(schemas: List[Dict[str, Any]]) -> str:
             schema = schema_by_id.get(meta["id_str"], {})
             props = schema.get("properties", {})
 
-            # Build ER-style label: name + separator + attributes
-            label_lines: List[str] = []
-            label_lines.append(title)
-            label_lines.append("──────────────")
-
             has_resolved_ref = False
+            attr_lines: List[str] = []
 
             for prop_name, prop_schema in props.items():
                 prop_type = guess_property_type(prop_schema)
+                attr_lines.append(f"{prop_name}: {prop_type}")
 
                 # Check if this property has a resolvable $ref
                 ref = prop_schema.get("$ref")
@@ -134,34 +137,29 @@ def schemas_to_mermaid(schemas: List[Dict[str, Any]]) -> str:
                     except Exception:
                         pass
 
-                label_lines.append(f"{prop_name}: {prop_type}")
+            # Build record label: {Title|prop1: type\lprop2: type\l}
+            if attr_lines:
+                attrs_text = "\\l".join(escape_label(a) for a in attr_lines) + "\\l"
+            else:
+                attrs_text = ""
 
-            # Build label with HTML <br/> so multi-line works in many Mermaid renderers
-            label = "<br/>".join(label_lines)
-            label = label.replace('"', '\\"')  # escape quotes
-
-            lines.append(f'    {node_id}["{label}"]')
-            lines.append(f"    {anchor_id} --> {node_id}")
+            label = f'{{{escape_label(title)}|{attrs_text}}}'
 
             if has_resolved_ref:
                 ref_highlight_nodes.add(node_id)
+                lines.append(
+                    f'    {node_id} [label="{label}", style="filled,bold", fillcolor="#ffcccc", color="#ff0000"];'
+                )
+            else:
+                lines.append(
+                    f'    {node_id} [label="{label}"];'
+                )
 
-        lines.append("  end")
-
-    # Chain domain anchors vertically to encourage vertical stacking of domain boxes
-    lines.append("")
-    lines.append("  %% Layout chain to stack domains vertically")
-    ordered_domains = [d for d, _ in sorted(domains.items(), key=lambda kv: kv[0])]
-    for i in range(len(ordered_domains) - 1):
-        d1 = ordered_domains[i]
-        d2 = ordered_domains[i + 1]
-        a1 = domain_anchors[d1]
-        a2 = domain_anchors[d2]
-        lines.append(f"  {a1} --> {a2}")
+        lines.append("  }")  # end cluster
 
     # Edges from $ref (foreign keys)
     lines.append("")
-    lines.append("  %% Relationships (foreign keys via $ref)")
+    lines.append("  // Relationships (foreign keys via $ref)")
     for schema in schemas:
         src_meta = extract_schema_meta(schema)
         if not src_meta:
@@ -188,31 +186,12 @@ def schemas_to_mermaid(schemas: List[Dict[str, Any]]) -> str:
                 continue
 
             tgt_node = tgt_meta["node_id"]
-            lines.append(f'  {src_node} -->|{prop_name}| {tgt_node}')
+            lines.append(
+                f'  {src_node} -> {tgt_node} [label="{escape_label(prop_name)}"];'
+            )
 
-    # Highlight entities that have at least one resolvable $ref
-    if ref_highlight_nodes:
-        lines.append("")
-        lines.append("  %% Highlight entities with resolvable $ref as red boxes")
-        lines.append("  classDef refEntity fill=#ffcccc,stroke=#ff0000,stroke-width=1px;")
-        for node in sorted(ref_highlight_nodes):
-            lines.append(f"  class {node} refEntity")
-
+    lines.append("}")
     return "\n".join(lines)
-
-
-def write_markdown(mermaid_text: str, filename: str = "schema_graph.md"):
-    """Write a markdown file embedding the Mermaid diagram."""
-    md: List[str] = []
-    md.append("# Schema Relationship Diagram\n")
-    md.append("```mermaid")
-    md.append(mermaid_text)
-    md.append("```")
-
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write("\n".join(md))
-
-    print(f"Markdown file written: {filename}")
 
 
 def _load_from_path(path: str, schemas: List[Dict[str, Any]]):
@@ -248,9 +227,34 @@ def load_schemas_from_paths(paths: Iterable[str]) -> List[Dict[str, Any]]:
     return schemas
 
 
+def write_svg(dot_text: str, filename: str = "schema_graph.svg"):
+    """Run Graphviz dot -Tsvg on the DOT text and write to filename."""
+    try:
+        proc = subprocess.run(
+            ["dot", "-Tsvg"],
+            input=dot_text.encode("utf-8"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    except FileNotFoundError:
+        print("Error: 'dot' (Graphviz) not found on PATH. Please install Graphviz.", file=sys.stderr)
+        sys.exit(1)
+
+    if proc.returncode != 0:
+        print("Error: dot failed:", file=sys.stderr)
+        print(proc.stderr.decode("utf-8", errors="ignore"), file=sys.stderr)
+        sys.exit(proc.returncode)
+
+    with open(filename, "wb") as f:
+        f.write(proc.stdout)
+
+    print(f"SVG file written: {filename}")
+
+
 def main(argv: Optional[List[str]] = None):
     parser = argparse.ArgumentParser(
-        description="Generate a vertical ER-style Mermaid diagram (in markdown) from JSON Schemas."
+        description="Generate an ER-style Graphviz SVG from JSON Schemas."
     )
     parser.add_argument(
         "paths",
@@ -266,8 +270,8 @@ def main(argv: Optional[List[str]] = None):
     parser.add_argument(
         "-o",
         "--out",
-        default="schema_graph.md",
-        help="Output markdown file (default: schema_graph.md)",
+        default="schema_graph.svg",
+        help="Output SVG file (default: schema_graph.svg)",
     )
 
     args = parser.parse_args(argv)
@@ -287,8 +291,8 @@ def main(argv: Optional[List[str]] = None):
         print("No schemas loaded from given paths.", file=sys.stderr)
         sys.exit(1)
 
-    mermaid = schemas_to_mermaid(schemas)
-    write_markdown(mermaid, args.out)
+    dot = schemas_to_dot(schemas)
+    write_svg(dot, args.out)
 
 
 if __name__ == "__main__":
