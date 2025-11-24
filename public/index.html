@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Schema UML Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- JointJS dependencies (order matters) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.4.1/backbone-min.js"></script>
+
+    <!-- graphlib + dagre for DirectedGraph layout -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/graphlib/2.1.8/graphlib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js"></script>
+
+    <!-- JointJS full build (includes joint.ui.* like PaperScroller) -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/jointjs/dist/joint.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/jointjs/dist/joint.js"></script>
+
+    <!-- Your custom styles -->
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="app-title">Schema UML Viewer</div>
+      <div class="app-subtitle">
+        Domains, entities &amp; foreign-key links (UML class style)
+      </div>
+    </header>
+
+    <div class="app-layout">
+      <!-- Sidebar with legend + details -->
+      <aside class="sidebar">
+        <h2>Legend</h2>
+        <ul>
+          <li>UML Class = Schema entity</li>
+          <li>Italic CAPS line = Domain</li>
+          <li>Arrow = Foreign key ($ref)</li>
+        </ul>
+
+        <h2>Details</h2>
+        <pre id="details">Select a class…</pre>
+      </aside>
+
+      <!-- Main panel: JointJS canvas (PaperScroller attaches here) -->
+      <main class="main-panel">
+        <div id="paper" class="paper-container"></div>
+      </main>
+    </div>
+
+    <!-- App logic -->
+    <script src="app.js"></script>
+  </body>
+</html>
