@@ -1,0 +1,36 @@
+{
+    "$id": "data://account.org.biz/model/1/payment-instruction",
+    "title": "PaymentInstruction",
+    "type": "object",
+    "description": "An instruction to move funds from one account to another.",
+    "properties": {
+        "paymentId": {
+            "type": "string",
+            "description": "Unique identifier for the payment instruction."
+        },
+        "sourceAccountNumber": {
+            "$ref": "data://account.org.biz/model/1/account#/properties/accountNumber"
+        },
+        "destinationAccountNumber": {
+            "type": "string",
+            "description": "The destination account number, which may be internal or external."
+        },
+        "amount": {
+            "type": "number",
+            "description": "The amount to be transferred."
+        },
+        "currency": {
+            "type": "string",
+            "description": "Currency in which the payment is to be made."
+        },
+        "scheduledDate": {
+            "type": "string",
+            "description": "Date and time when the payment should be executed."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["scheduled", "processing", "completed", "failed", "cancelled"],
+            "description": "Status of the payment instruction."
+        }
+    }
+}

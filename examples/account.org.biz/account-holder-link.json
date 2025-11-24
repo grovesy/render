@@ -1,0 +1,23 @@
+{
+    "$id": "data://account.org.biz/model/1/account-holder-link",
+    "title": "AccountHolderLink",
+    "type": "object",
+    "description": "A link between an account and a contact who holds or is associated with the account.",
+    "properties": {
+        "accountHolderId": {
+            "type": "string",
+            "description": "Unique identifier for this account-holder relationship."
+        },
+        "contactId": {
+            "$ref": "data://contact.org.biz/model/1/contact#/properties/contactId"
+        },
+        "accountNumber": {
+            "$ref": "data://account.org.biz/model/1/account#/properties/accountNumber"
+        },
+        "role": {
+            "type": "string",
+            "enum": ["primary", "joint", "authorized_signer", "beneficial_owner"],
+            "description": "The role of this contact in relation to the account."
+        }
+    }
+}

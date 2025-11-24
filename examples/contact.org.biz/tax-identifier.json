@@ -1,0 +1,28 @@
+{
+    "$id": "data://contact.org.biz/model/1/tax-identifier",
+    "title": "TaxIdentifier",
+    "type": "object",
+    "description": "A tax identifier for a contact or customer (e.g., SSN, TIN).",
+    "properties": {
+        "taxId": {
+            "type": "string",
+            "description": "The unique identifier for this tax record."
+        },
+        "contactId": {
+            "$ref": "data://contact.org.biz/model/1/contact#/properties/contactId"
+        },
+        "taxIdType": {
+            "type": "string",
+            "enum": ["SSN", "TIN", "VAT", "NINO", "OTHER"],
+            "description": "The type of tax identifier."
+        },
+        "identifierValue": {
+            "type": "string",
+            "description": "The tax identifier value."
+        },
+        "countryCode": {
+            "type": "string",
+            "description": "Country associated with this tax identifier."
+        }
+    }
+}

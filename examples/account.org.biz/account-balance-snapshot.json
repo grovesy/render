@@ -1,0 +1,31 @@
+{
+    "$id": "data://account.org.biz/model/1/account-balance-snapshot",
+    "title": "AccountBalanceSnapshot",
+    "type": "object",
+    "description": "A snapshot of an account balance at a specific point in time.",
+    "properties": {
+        "snapshotId": {
+            "type": "string",
+            "description": "Unique identifier for this snapshot."
+        },
+        "accountNumber": {
+            "$ref": "data://account.org.biz/model/1/account#/properties/accountNumber"
+        },
+        "asOf": {
+            "type": "string",
+            "description": "Timestamp at which the balance was measured."
+        },
+        "availableBalance": {
+            "type": "number",
+            "description": "Amount available for withdrawal or use."
+        },
+        "currentBalance": {
+            "type": "number",
+            "description": "Total ledger balance including pending items."
+        },
+        "currency": {
+            "type": "string",
+            "description": "Currency of the balances."
+        }
+    }
+}

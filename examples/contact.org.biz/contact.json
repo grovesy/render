@@ -1,0 +1,20 @@
+{
+    "$id": "data://contact.org.biz/model/1/contact",
+    "title": "Contact",
+    "type": "object",
+    "description": "A contact object representing an individual.",
+    "properties": {
+        "contactId": {
+            "type": "string",
+            "description": "The unique identifier for the person."
+        },
+        "firstName": {
+            "type": "string",
+            "description": "The person's first name."
+        },
+        "lastName": {
+            "type": "string",
+            "description": "The person's last name."
+        }
+    }
+}

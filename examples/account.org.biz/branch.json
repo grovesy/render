@@ -1,0 +1,28 @@
+{
+    "$id": "data://account.org.biz/model/1/branch",
+    "title": "Branch",
+    "type": "object",
+    "description": "A physical or logical branch of a bank.",
+    "properties": {
+        "branchId": {
+            "type": "string",
+            "description": "Unique identifier for the branch."
+        },
+        "bankId": {
+            "type": "string",
+            "description": "Identifier of the bank that owns this branch."
+        },
+        "name": {
+            "type": "string",
+            "description": "Name of the branch."
+        },
+        "routingNumber": {
+            "type": "string",
+            "description": "Routing or sort code associated with the branch."
+        },
+        "addressId": {
+            "type": "string",
+            "description": "Identifier of the branch address."
+        }
+    }
+}

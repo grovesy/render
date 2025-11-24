@@ -1,0 +1,24 @@
+{
+    "$id": "data://account.org.biz/model/1/bank",
+    "title": "Bank",
+    "type": "object",
+    "description": "An institution that holds customer accounts and processes financial transactions.",
+    "properties": {
+        "bankId": {
+            "type": "string",
+            "description": "Unique identifier for the bank."
+        },
+        "name": {
+            "type": "string",
+            "description": "Legal or marketing name of the bank."
+        },
+        "swiftCode": {
+            "type": "string",
+            "description": "The bank's SWIFT/BIC code."
+        },
+        "countryCode": {
+            "type": "string",
+            "description": "Country in which the bank is primarily registered."
+        }
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "$id": "data://contact.org.biz/model/1/email-address",
+    "title": "EmailAddress",
+    "type": "object",
+    "description": "A structured representation of an email address.",
+    "properties": {
+        "emailId": {
+            "type": "string",
+            "description": "The unique identifier for this email address record."
+        },
+        "contactId": {
+            "$ref": "data://contact.org.biz/model/1/contact#/properties/contactId"
+        },
+        "email": {
+            "type": "string",
+            "description": "The email address of the contact."
+        },
+        "type": {
+            "type": "string",
+            "enum": ["personal", "work", "billing", "other"],
+            "description": "The type or purpose of the email address."
+        },
+        "isPrimary": {
+            "type": "boolean",
+            "description": "Indicates whether this is the primary email address for the contact."
+        }
+    }
+}

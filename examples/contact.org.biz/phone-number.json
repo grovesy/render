@@ -1,0 +1,32 @@
+{
+    "$id": "data://contact.org.biz/model/1/phone-number",
+    "title": "PhoneNumber",
+    "type": "object",
+    "description": "A structured representation of a phone number.",
+    "properties": {
+        "phoneId": {
+            "type": "string",
+            "description": "The unique identifier for this phone number."
+        },
+        "contactId": {
+            "$ref": "data://contact.org.biz/model/1/contact#/properties/contactId"
+        },
+        "countryCode": {
+            "type": "string",
+            "description": "Country calling code (e.g., '+1', '+44')."
+        },
+        "number": {
+            "type": "string",
+            "description": "The local phone number, excluding the country code."
+        },
+        "type": {
+            "type": "string",
+            "enum": ["mobile", "home", "work", "fax", "other"],
+            "description": "The type or purpose of the phone number."
+        },
+        "isPrimary": {
+            "type": "boolean",
+            "description": "Indicates whether this is the primary phone number for the contact."
+        }
+    }
+}

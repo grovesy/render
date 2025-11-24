@@ -40,5 +40,3 @@ build/
 # Other common files to ignore
 *.log
 *.sqlite3
-
-examples

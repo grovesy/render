@@ -1,0 +1,26 @@
+{
+    "id": "data://account.org.biz/model/1/account",
+    
+    "title": "Account",
+    "type": "object",
+    "description": "An account object representing a user account.",
+    "properties": {
+        "routingNumber": {
+            "type": "string",
+            "description": "The unique identifier for the account."
+        },
+        "accountNumber": {
+            "type": "string",
+            "description": "The number associated with the account."
+        },
+        "accountName": {
+            "type": "string",
+            "description": "The name associated with the account."
+        },
+        "accountType": {
+            "type": "enum",
+            "enum": ["savings", "checking"],
+            "description": "The type of account (e.g., 'savings', 'checking')."
+        }
+    }
+}

@@ -1,0 +1,29 @@
+{
+    "$id": "data://contact.org.biz/model/1/kyc-profile",
+    "title": "KYCProfile",
+    "type": "object",
+    "description": "Know Your Customer (KYC) information for regulatory and risk management.",
+    "properties": {
+        "kycId": {
+            "type": "string",
+            "description": "Unique identifier for this KYC profile."
+        },
+        "customerId": {
+            "type": "string",
+            "description": "Identifier for the associated customer."
+        },
+        "riskRating": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "description": "Overall KYC risk rating for the customer."
+        },
+        "lastReviewedAt": {
+            "type": "string",
+            "description": "Timestamp when the KYC profile was last reviewed."
+        },
+        "reviewer": {
+            "type": "string",
+            "description": "Identifier or name of the person who performed the last KYC review."
+        }
+    }
+}

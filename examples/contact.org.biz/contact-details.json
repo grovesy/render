@@ -1,0 +1,23 @@
+{
+    "$id": "data://contact.org.biz/model/1/contact-details",
+    "title": "ContactDetails",
+    "type": "object",
+    "description": "An object representing contact details for a person.",
+    "properties": {
+        "contactId": {
+            "$ref": "data://contact.org.biz/model/1/contact#/properties/contactId"
+        },
+        "email": {
+            "type": "string",
+            "description": "The email address of the person."
+        },
+        "phoneNumber": {
+            "type": "string",
+            "description": "The phone number of the person."
+        },
+        "address": {
+            "type": "string",
+            "description": "The physical address of the person."
+        }
+    }
+}

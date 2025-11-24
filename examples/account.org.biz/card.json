@@ -1,0 +1,37 @@
+{
+    "$id": "data://account.org.biz/model/1/card",
+    "title": "Card",
+    "type": "object",
+    "description": "A payment card associated with an account.",
+    "properties": {
+        "cardId": {
+            "type": "string",
+            "description": "Unique identifier for the card."
+        },
+        "accountNumber": {
+            "$ref": "data://account.org.biz/model/1/account#/properties/accountNumber"
+        },
+        "cardType": {
+            "type": "string",
+            "enum": ["debit", "credit", "prepaid"],
+            "description": "Type of card."
+        },
+        "maskedCardNumber": {
+            "type": "string",
+            "description": "Masked representation of the card number (e.g., '**** **** **** 1234')."
+        },
+        "expiryMonth": {
+            "type": "integer",
+            "description": "Card expiry month (1–12)."
+        },
+        "expiryYear": {
+            "type": "integer",
+            "description": "Card expiry year in four-digit format."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["active", "blocked", "expired", "cancelled"],
+            "description": "Current status of the card."
+        }
+    }
+}

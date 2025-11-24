@@ -1,0 +1,32 @@
+{
+    "$id": "data://account.org.biz/model/1/direct-debit-mandate",
+    "title": "DirectDebitMandate",
+    "type": "object",
+    "description": "A mandate giving an organization permission to debit a customer's account.",
+    "properties": {
+        "mandateId": {
+            "type": "string",
+            "description": "Unique identifier for the direct debit mandate."
+        },
+        "accountNumber": {
+            "$ref": "data://account.org.biz/model/1/account#/properties/accountNumber"
+        },
+        "creditorName": {
+            "type": "string",
+            "description": "Name of the organization allowed to debit the account."
+        },
+        "creditorId": {
+            "type": "string",
+            "description": "Identifier of the creditor organization."
+        },
+        "signatureDate": {
+            "type": "string",
+            "description": "Date when the mandate was signed or accepted."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["active", "suspended", "cancelled", "expired"],
+            "description": "Current status of the mandate."
+        }
+    }
+}
