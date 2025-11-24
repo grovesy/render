@@ -1,4 +1,4 @@
-// public/app.js — hub layout per domain, central link entities, pan/zoom
+// public/app.js — hub layout per domain, central link entities, pan/zoom, nicer fonts
 
 async function fetchGraph() {
   const res = await fetch("/graph");
@@ -102,25 +102,36 @@ async function init() {
   // Create all cells first with temporary positions
   graphData.entities.forEach((e, idx) => {
     const domainLabel = `*${e.domain.toUpperCase()}*`;
-    const attrs = e.attrs.map(a => `${a.field}: ${a.type}`);
+
+    // Align "name  :  type" nicely
+    const fieldNames = e.attrs.map(a => a.field);
+    const maxLen = fieldNames.length
+      ? fieldNames.reduce((m, s) => Math.max(m, s.length), 0)
+      : 0;
+
+    const attrs = e.attrs.map(a =>
+      `${a.field.padEnd(maxLen, " ")}  :  ${a.type}`
+    );
 
     const cls = new uml.Class({
       position: { x: 100 + idx * 20, y: 100 + idx * 20 }, // temp; overridden by layout
-      size: { width: 260, height: 170 },
+      size: { width: 280, height: 190 },
       name: `${domainLabel}\n${e.title}`,
       attributes: attrs,
       methods: [],
       attrs: {
         ".uml-class-name-rect": {
-          fill: "#1e3a8a",
-          stroke: "#0f172a",
+          fill: "#0f172a",
+          stroke: "#1e293b",
           "stroke-width": 1
         },
         ".uml-class-name-text": {
-          fill: "#f8fafc",
-          "font-size": 12,
+          fill: "#f1f5f9",
+          "font-size": 16,
+          "font-family": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+          "font-weight": "600",
           "font-style": "italic",
-          "font-weight": "600"
+          "letter-spacing": "0.5px"
         },
         ".uml-class-attrs-rect": {
           fill: "#3b82f6",
@@ -128,8 +139,13 @@ async function init() {
           "stroke-width": 1
         },
         ".uml-class-attrs-text": {
-          fill: "white",
-          "font-size": 11
+          fill: "#f9fafb",
+          "font-size": 14,
+          "font-family": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+          "font-weight": "400",
+          "line-height": "1.6em",
+          "white-space": "pre",
+          "xml:space": "preserve"
         }
       }
     });
@@ -212,7 +228,6 @@ async function init() {
     });
 
     if (!mainEntities.length) {
-      // Nothing to layout here (domain might only have orphans/linkers)
       return;
     }
 
@@ -272,11 +287,9 @@ async function init() {
 
   // ---------- Layout linking entities in the CENTER ----------
   if (linkingKeys.length > 0) {
-    // center X across all domain centers we have
     const centerXs = Object.values(domainCenters);
     let midCenterX;
     if (centerXs.length === 0) {
-      // fallback: some default
       midCenterX = 2000;
     } else {
       const minX = Math.min(...centerXs);
@@ -284,8 +297,8 @@ async function init() {
       midCenterX = (minX + maxX) / 2;
     }
 
-    const linkRowY = centerY;          // same vertical row as hubs
-    const linkSpacingX = 380;          // horizontal spacing between linkers
+    const linkRowY = centerY;          // same vertical row as hubs (or centerY + 80 to drop slightly)
+    const linkSpacingX = 380;
     const totalWidth = (linkingKeys.length - 1) * linkSpacingX;
     const startX = midCenterX - totalWidth / 2;
 
@@ -349,7 +362,7 @@ async function init() {
                 text: r.field,
                 "font-size": 10,
                 fill: "#111827",
-                "font-family": "system-ui"
+                "font-family": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
               }
             }
           }
