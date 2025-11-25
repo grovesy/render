@@ -12,11 +12,9 @@
 //       attrs: [
 //          { field: "addressId", type: "string" },
 //          { field: "address.line1", type: "string" },
-//          { field: "address.line2", type: "string" },
-//          { field: "address.city", type: "string" },
 //          ...
 //       ],
-//       refs:  [{ field: "something", ref: "data://..." }]
+//       refs:  [{ field: "owners", ref: "data://contact.org.biz/model/1/contact" }]
 //     },
 //     ...
 //   ]
@@ -206,12 +204,33 @@ function buildGraphFromSchemas(schemaDirs) {
       collectAttributes(schema.properties, "", attrs, refs);
     }
 
+    // ---- DEDUPE refs, normalizing array paths ----
+    // Treat "owners" and "owners[]" (and any field with [] segments) as
+    // the same FK for dedupe purposes, so we don't get double edges.
+    const seen = new Set();
+    const dedupedRefs = [];
+    for (const r of refs) {
+      if (!r || !r.ref) continue;
+
+      const rawField = typeof r.field === "string" ? r.field : "";
+      const normField = rawField.replace(/\[\]/g, ""); // strip [] anywhere
+
+      const key = `${normField}||${r.ref}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      dedupedRefs.push({
+        field: normField, // use clean label in the diagram
+        ref: r.ref
+      });
+    }
+
     entities.push({
       domain,
       model: modelName,
       title,
       attrs,
-      refs
+      refs: dedupedRefs
     });
   }
 
