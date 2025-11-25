@@ -1,5 +1,5 @@
 // public/app.js — auto layout with DirectedGraph, pan/zoom, rounded UML boxes,
-// auto-sized height, flattened attributes rendered.
+// auto-sized width & height based on content, flattened attributes rendered, centered on load.
 
 async function fetchGraph() {
   const res = await fetch("/graph");
@@ -97,24 +97,34 @@ async function init() {
 
     // Align "name  :  type" with monospace font
     const fieldNames = e.attrs.map(a => a.field);
-    const maxLen = fieldNames.length
+    const maxFieldLen = fieldNames.length
       ? fieldNames.reduce((m, s) => Math.max(m, s.length), 0)
       : 0;
 
     const attrLines = e.attrs.map(a =>
-      `${a.field.padEnd(maxLen, " ")}  :  ${a.type}`
+      `${a.field.padEnd(maxFieldLen, " ")}  :  ${a.type}`
     );
 
-    // Auto height to fit attributes (header + attrs)
-    const baseHeight = 50;        // for title/header
-    const perAttr = 16;           // per attribute line
+    // ---- Auto size based on content ----
+    const headerHeight = 50;   // title area
+    const lineHeight = 18;     // px per attribute line (more generous)
     const attrCount = attrLines.length || 1;
-    const height = baseHeight + perAttr * attrCount;
+    const height = headerHeight + lineHeight * attrCount;
+
+    // Approximate width from longest attribute line
+    const maxLineLen = attrLines.length
+      ? attrLines.reduce((m, s) => Math.max(m, s.length), 0)
+      : 10;
+
+    const charWidth = 7;  // px per character for 12px monospace
+    const padding = 40;   // left/right padding inside rect
+    let width = padding + maxLineLen * charWidth;
+    width = Math.max(220, Math.min(420, width)); // clamp between min & max
 
     const cls = new uml.Class({
       // temporary position; DirectedGraph will override
       position: { x: 100 + idx * 20, y: 100 + idx * 20 },
-      size: { width: 260, height: height },
+      size: { width, height },
       name: `${domainLabel}\n${e.title}`,
       attributes: attrLines,
       methods: [],
@@ -204,15 +214,14 @@ async function init() {
   });
 
   // ---------- AUTOMATIC LAYOUT (DirectedGraph) ----------
-  // Top-to-bottom, with generous spacing to reduce overlap and crossings.
   joint.layout.DirectedGraph.layout(graph, {
     setLinkVertices: true,
     rankDir: "TB",     // Top -> Bottom
-    nodeSep: 140,      // min horizontal spacing between nodes
-    edgeSep: 40,       // min spacing between edges
-    rankSep: 220,      // vertical spacing between layers
-    marginX: 100,
-    marginY: 100
+    nodeSep: 180,      // min horizontal spacing between nodes
+    edgeSep: 60,       // min spacing between edges
+    rankSep: 280,      // vertical spacing between layers
+    marginX: 120,
+    marginY: 120
   });
 
   // ---------- CENTER WHOLE GRAPH IN VIEW ON LOAD ----------
@@ -234,7 +243,8 @@ async function init() {
     lastTranslate = { x: tx, y: ty };
   }
 
-  centerGraph();
+  // Defer centering slightly to ensure layout + render completed
+  setTimeout(centerGraph, 80);
 
   // ---------- DETAILS PANEL ----------
   const detailsEl = document.getElementById("details");
