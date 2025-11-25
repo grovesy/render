@@ -1,4 +1,4 @@
-// public/app.js — auto layout with DirectedGraph, domain-based vertical bands,
+// public/app.js — auto layout with DirectedGraph, domain-based horizontal offsets,
 // pan/zoom, rounded UML boxes, auto-sized width & height, centered on load.
 
 async function fetchGraph() {
@@ -224,7 +224,7 @@ async function init() {
     marginY: 120
   });
 
-  // ---------- DOMAIN-BASED GROUPING (vertical bands) ----------
+  // ---------- DOMAIN-BASED HORIZONTAL OFFSETS ----------
   const elements = graph.getElements();
 
   // Collect domains from elements that have schemaData
@@ -237,25 +237,31 @@ async function init() {
   });
 
   const domains = Array.from(domainsSet).sort();
-  const baseX = 200;        // starting X for first domain
-  const domainGap = 500;    // horizontal gap between domain columns
-
-  // Map domain -> target centerX
-  const domainCenters = {};
-  domains.forEach((domain, idx) => {
-    domainCenters[domain] = baseX + idx * domainGap;
+  const domainIndex = {};
+  domains.forEach((d, i) => {
+    domainIndex[d] = i;
   });
 
-  // Reposition elements into vertical bands per domain, preserving Y from layout
+  // Compute global minimum X so we normalize positions before offsetting
+  let globalMinX = Infinity;
+  elements.forEach(el => {
+    const p = el.position();
+    if (p.x < globalMinX) globalMinX = p.x;
+  });
+  if (!isFinite(globalMinX)) globalMinX = 0;
+
+  const domainGap = 500; // how far apart each domain "band" is
+
   elements.forEach(el => {
     const data = el.get("schemaData");
     if (!data || !data.domain) return;
 
-    const centerX = domainCenters[data.domain];
-    if (centerX == null) return;
-
+    const idx = domainIndex[data.domain] || 0;
     const pos = el.position();
-    el.position(centerX, pos.y);
+
+    // Keep the relative X from DirectedGraph, just shift per-domain
+    const newX = (pos.x - globalMinX) + idx * domainGap;
+    el.position(newX, pos.y);
   });
 
   // ---------- CENTER WHOLE GRAPH IN VIEW ON LOAD ----------
