@@ -8,29 +8,35 @@
             "type": "string",
             "description": "The unique identifier for this address record."
         },
-        "line1": {
-            "type": "string",
-            "description": "Primary address line (e.g., street address, P.O. box)."
-        },
-        "line2": {
-            "type": "string",
-            "description": "Secondary address line (e.g., apartment, suite, unit)."
-        },
-        "city": {
-            "type": "string",
-            "description": "City or locality of the address."
-        },
-        "stateOrProvince": {
-            "type": "string",
-            "description": "State, province, or region of the address."
-        },
-        "postalCode": {
-            "type": "string",
-            "description": "Postal or ZIP code associated with the address."
-        },
-        "countryCode": {
-            "type": "string",
-            "description": "Two-letter ISO country code (e.g., 'US', 'GB')."
+        "address": {
+            "type": "object",
+            "description": "The detailed components of the postal address.",
+            "properties": {
+                "line1": {
+                    "type": "string",
+                    "description": "Primary address line (e.g., street address, P.O. box)."
+                },
+                "line2": {
+                    "type": "string",
+                    "description": "Secondary address line (e.g., apartment, suite, unit)."
+                },
+                "city": {
+                    "type": "string",
+                    "description": "City or locality of the address."
+                },
+                "stateOrProvince": {
+                    "type": "string",
+                    "description": "State, province, or region of the address."
+                },
+                "postalCode": {
+                    "type": "string",
+                    "description": "Postal or ZIP code associated with the address."
+                },
+                "countryCode": {
+                    "type": "string",
+                    "description": "Two-letter ISO country code (e.g., 'US', 'GB')."
+                }
+            }
         }
     }
 }

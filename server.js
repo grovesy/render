@@ -1,9 +1,8 @@
 const express = require("express");
-const cors = require("cors");
 const { buildGraphFromSchemas } = require("./schemaGraph");
 
 const app = express();
-app.use(cors());
+
 app.use(express.static("public"));
 
 app.get("/graph", (req, res) => {

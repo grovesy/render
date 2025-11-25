@@ -1,4 +1,5 @@
-// public/app.js — hub layout per domain, central link entities, pan/zoom, nicer fonts
+// public/app.js — hub layout per domain, central link entities, pan/zoom,
+// rounded corners, auto-sized boxes, flattened attributes rendered.
 
 async function fetchGraph() {
   const res = await fetch("/graph");
@@ -103,47 +104,56 @@ async function init() {
   graphData.entities.forEach((e, idx) => {
     const domainLabel = `*${e.domain.toUpperCase()}*`;
 
-    // Align "name  :  type" nicely
+    // Align "name  :  type" with monospace font
     const fieldNames = e.attrs.map(a => a.field);
     const maxLen = fieldNames.length
       ? fieldNames.reduce((m, s) => Math.max(m, s.length), 0)
       : 0;
 
-    const attrs = e.attrs.map(a =>
+    const attrLines = e.attrs.map(a =>
       `${a.field.padEnd(maxLen, " ")}  :  ${a.type}`
     );
 
+    // Auto height to fit attributes (header + attrs)
+    const baseHeight = 50;        // for title/header
+    const perAttr = 16;           // per attribute line
+    const attrCount = attrLines.length || 1;
+    const height = baseHeight + perAttr * attrCount;
+
     const cls = new uml.Class({
       position: { x: 100 + idx * 20, y: 100 + idx * 20 }, // temp; overridden by layout
-      size: { width: 280, height: 190 },
+      size: { width: 260, height: height },
       name: `${domainLabel}\n${e.title}`,
-      attributes: attrs,
+      attributes: attrLines,
       methods: [],
       attrs: {
         ".uml-class-name-rect": {
           fill: "#0f172a",
           stroke: "#1e293b",
-          "stroke-width": 1
+          "stroke-width": 1,
+          rx: 6,
+          ry: 6
         },
         ".uml-class-name-text": {
           fill: "#f1f5f9",
-          "font-size": 16,
+          "font-size": 14,
           "font-family": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
           "font-weight": "600",
-          "font-style": "italic",
-          "letter-spacing": "0.5px"
+          "font-style": "italic"
         },
         ".uml-class-attrs-rect": {
           fill: "#3b82f6",
           stroke: "#1e3a8a",
-          "stroke-width": 1
+          "stroke-width": 1,
+          rx: 6,
+          ry: 6
         },
         ".uml-class-attrs-text": {
           fill: "#f9fafb",
-          "font-size": 14,
-          "font-family": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+          "font-size": 12,
+          "font-family": "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
           "font-weight": "400",
-          "line-height": "1.6em",
+          "line-height": "1.5em",
           "white-space": "pre",
           "xml:space": "preserve"
         }
@@ -208,12 +218,12 @@ async function init() {
     .filter(([, m]) => m.neighborDomains.size > 1)
     .map(([k]) => k);
 
-  // ---------- Layout constants (looser) ----------
+  // ---------- Layout constants ----------
   const centerY = 500;           // vertical center row for hubs
   const baseDomainCenterX = 800;
-  const domainSpacingX = 1100;   // more distance between domain clusters
-  const rowOffset = 350;         // distance hubs -> satellite rows
-  const colSpacing = 400;        // spacing between satellites in a row
+  const domainSpacingX = 1100;   // distance between domain clusters
+  const rowOffset = 260;         // distance hubs -> satellite rows
+  const colSpacing = 320;        // spacing between satellites in a row
 
   const domainCenters = {};      // domain -> centerX used
 
@@ -297,8 +307,8 @@ async function init() {
       midCenterX = (minX + maxX) / 2;
     }
 
-    const linkRowY = centerY;          // same vertical row as hubs (or centerY + 80 to drop slightly)
-    const linkSpacingX = 380;
+    const linkRowY = centerY;          // same vertical row as hubs
+    const linkSpacingX = 320;
     const totalWidth = (linkingKeys.length - 1) * linkSpacingX;
     const startX = midCenterX - totalWidth / 2;
 
@@ -324,7 +334,7 @@ async function init() {
     }
 
     const orphanY = centerY + 3 * rowOffset;
-    const orphanSpacingX = 340;
+    const orphanSpacingX = 300;
     const totalWidth = (orphanKeys.length - 1) * orphanSpacingX;
     const startX = midCenterX - totalWidth / 2;
 
