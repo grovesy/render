@@ -1,230 +1,212 @@
 // src/App.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  ThemeProvider,
+  createTheme,
+  CssBaseline,
+  Box,
+  AppBar,
+  Toolbar,
+  Tabs,
+  Tab,
+  Typography,
+  Divider,
+} from "@mui/material";
+import LeftSidebar from "./components/LeftSidebar";
 import GraphView from "./components/GraphView";
+import ConceptGraphView from "./components/ConceptGraphView";
 
-// Same API base convention as GraphView
+// API base from Vite env: VITE_API_BASE_URL=http://localhost:3000
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL || "";
 const API_BASE = RAW_BASE.replace(/\/$/, "");
 
-// Fetch graph once just to build the navigator tree
-async function fetchGraphMeta() {
-  const res = await fetch(`${API_BASE}/graph`);
-  if (!res.ok) throw new Error("Failed to load graph metadata: " + res.status);
-  return res.json();
-}
+const theme = createTheme({
+  palette: {
+    mode: "light",
+    background: {
+      default: "#f3f4f6",
+      paper: "#ffffff",
+    },
+  },
+  typography: {
+    fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+  },
+});
 
 export default function App() {
-  const [domains, setDomains] = useState([]);
-  const [error, setError] = useState("");
-  const [selectedKey, setSelectedKey] = useState(null);
+  const [tab, setTab] = useState("model");
+  const [fileIndex, setFileIndex] = useState({
+    jsonModels: [],
+    markdown: [],
+    concepts: [],
+  });
 
+  const [selectedModelKey, setSelectedModelKey] = useState(null); // `${domain}:${model}`
+  const [selectedConceptPath, setSelectedConceptPath] = useState(null);
+
+  const [filesError, setFilesError] = useState("");
+
+  // -------- Fetch /files once ----------
   useEffect(() => {
-    fetchGraphMeta()
-      .then((data) => {
-        const byDomain = new Map();
-
-        (data.entities || []).forEach((e) => {
-          if (!byDomain.has(e.domain)) byDomain.set(e.domain, []);
-          byDomain.get(e.domain).push(e);
-        });
-
-        const domainList = Array.from(byDomain.entries()).map(
-          ([domain, entities]) => ({
-            domain,
-            entities: entities.sort((a, b) =>
-              (a.title || a.model).localeCompare(b.title || b.model)
-            ),
-          })
-        );
-
-        domainList.sort((a, b) => a.domain.localeCompare(b.domain));
-        setDomains(domainList);
-        setError("");
-      })
-      .catch((err) => {
-        console.error("Failed to load navigator data:", err);
-        setError(err.message || "Failed to load models list");
-      });
+    async function loadFiles() {
+      try {
+        const res = await fetch(`${API_BASE}/files`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setFileIndex(data);
+        setFilesError("");
+      } catch (err) {
+        console.error("[App] Failed to load /files:", err);
+        setFilesError(err.message || "Failed to load files index");
+      }
+    }
+    loadFiles();
   }, []);
 
+  // -------- Handle JSON file click (resolve to `${domain}:${model}`) ----------
+  const handleJsonFileClick = useCallback(async (filePath) => {
+    try {
+      const url = `${API_BASE}/file?path=${encodeURIComponent(filePath)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      let schema;
+      try {
+        schema = JSON.parse(text);
+      } catch (e) {
+        console.error("[App] File is not valid JSON:", e);
+        return;
+      }
+
+      const idStr = schema.$id || schema.id;
+      if (!idStr || !idStr.startsWith("data://")) {
+        console.warn("[App] Schema has no $id/id or unexpected format:", idStr);
+        return;
+      }
+
+      // parse: data://<domain>/model/<version>/<model-name>
+      const without = idStr.slice("data://".length);
+      const [domain, rest] = without.split("/model/");
+      if (!domain || !rest) {
+        console.warn("[App] Cannot parse schema id:", idStr);
+        return;
+      }
+      const [, modelName] = rest.split("/");
+      if (!modelName) {
+        console.warn("[App] Cannot parse model name from:", idStr);
+        return;
+      }
+
+      const key = `${domain}:${modelName}`;
+      console.log("[App] Selecting model key from JSON file:", {
+        filePath,
+        idStr,
+        domain,
+        modelName,
+        key,
+      });
+
+      setSelectedModelKey(key);
+      setTab("model");
+    } catch (err) {
+      console.error("[App] handleJsonFileClick error:", err);
+    }
+  }, []);
+
+  // -------- Handle concept file click ----------
+  const handleConceptFileClick = useCallback((filePath) => {
+    console.log("[App] Selecting concept file:", filePath);
+    setSelectedConceptPath(filePath);
+    setTab("concept");
+  }, []);
+
+  const handleTabChange = (event, value) => {
+    setTab(value);
+  };
+
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100vh",
-        width: "100vw",
-        overflow: "hidden",
-        fontFamily:
-          "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
-      }}
-    >
-      {/* LEFT SIDEBAR: domain → models tree */}
-      <aside
-        style={{
-          width: 260,
-          backgroundColor: "#020617",
-          color: "#e5e7eb",
-          borderRight: "2px solid #111827",
-          display: "flex",
-          flexDirection: "row",
-          boxSizing: "border-box",
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+        {/* Top bar */}
+        <AppBar position="static" elevation={1} color="default">
+          <Toolbar sx={{ gap: 2 }}>
+            <Typography variant="h6" sx={{ flexShrink: 0 }}>
+              Schema & Concept Explorer
+            </Typography>
+            <Tabs
+              value={tab}
+              onChange={handleTabChange}
+              textColor="primary"
+              indicatorColor="primary"
+              sx={{ ml: 4 }}
+            >
+              <Tab value="model" label="Model" />
+              <Tab value="concept" label="Concept" />
+            </Tabs>
+          </Toolbar>
+        </AppBar>
+
+        {/* Main content: left sidebar + graph area */}
+        <Box
+          sx={{
             display: "flex",
-            flexDirection: "column",
-            padding: "12px 10px",
-            boxSizing: "border-box",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "#9ca3af",
-              marginBottom: 8,
-            }}
-          >
-            Navigator
-          </div>
-
-          <div
-            style={{
-              fontSize: 10,
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              color: "#6b7280",
-              marginBottom: 6,
-            }}
-          >
-            JSON Models
-          </div>
-
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              paddingRight: 4,
-            }}
-          >
-            {error && (
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "#fca5a5",
-                  marginBottom: 8,
-                }}
-              >
-                {error}
-              </div>
-            )}
-
-            {!error && domains.length === 0 && (
-              <div style={{ fontSize: 11, color: "#6b7280" }}>
-                Loading models…
-              </div>
-            )}
-
-            {/* Tree structure: domain → list of models */}
-            {domains.map(({ domain, entities }) => (
-              <div key={domain} style={{ marginBottom: 10 }}>
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    color: "#e5e7eb",
-                    marginBottom: 2,
-                  }}
-                >
-                  {domain}
-                </div>
-
-                <ul
-                  style={{
-                    listStyle: "none",
-                    margin: 0,
-                    paddingLeft: 12,
-                    borderLeft: "1px solid #1f2937",
-                  }}
-                >
-                  {entities.map((e) => {
-                    const key = `${domain}:${e.model}`;
-                    const isSelected = key === selectedKey;
-                    return (
-                      <li
-                        key={key}
-                        onClick={() => setSelectedKey(key)}
-                        style={{
-                          fontSize: 12,
-                          padding: "3px 0 3px 4px",
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                          textOverflow: "ellipsis",
-                          overflow: "hidden",
-                          borderRadius: 4,
-                          marginBottom: 2,
-                          backgroundColor: isSelected
-                            ? "#1f2937"
-                            : "transparent",
-                          color: isSelected ? "#e5e7eb" : "#cbd5f5",
-                        }}
-                        title={`${e.title || e.model} (${e.model}.json)`}
-                      >
-                        <span style={{ opacity: 0.9 }}>
-                          {e.title || e.model}.json
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </aside>
-
-      {/* MAIN AREA: header + graph */}
-      <main
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-          backgroundColor: "#f3f4f6",
-        }}
-      >
-        <header
-          style={{
-            padding: "10px 14px",
-            borderBottom: "1px solid #e5e7eb",
-            backgroundColor: "#ffffff",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: "#111827",
-            }}
-          >
-            Schema Graph
-          </div>
-        </header>
-
-        <section
-          style={{
             flex: 1,
             minHeight: 0,
           }}
         >
-          {/* GraphView gets the currently selected domain:model key */}
-          <GraphView selectedKey={selectedKey} />
-        </section>
-      </main>
-    </div>
+          {/* Left sidebar */}
+          <Box
+            sx={{
+              width: 260,
+              borderRight: 1,
+              borderColor: "divider",
+              bgcolor: "background.paper",
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 0,
+            }}
+          >
+            <Box sx={{ p: 1 }}>
+              <Typography
+                variant="caption"
+                sx={{ textTransform: "uppercase", color: "text.secondary" }}
+              >
+                Files
+              </Typography>
+            </Box>
+            <Divider />
+            {filesError ? (
+              <Box sx={{ p: 1, color: "error.main", fontSize: 12 }}>
+                {filesError}
+              </Box>
+            ) : (
+              <LeftSidebar
+                fileIndex={fileIndex}
+                onJsonFileClick={handleJsonFileClick}
+                onConceptFileClick={handleConceptFileClick}
+              />
+            )}
+          </Box>
+
+          {/* Main graph view */}
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 0,
+              display: "flex",
+              bgcolor: "#f9fafb",
+            }}
+          >
+            {tab === "model" ? (
+              <GraphView selectedKey={selectedModelKey} />
+            ) : (
+              <ConceptGraphView conceptPath={selectedConceptPath} />
+            )}
+          </Box>
+        </Box>
+      </Box>
+    </ThemeProvider>
   );
 }

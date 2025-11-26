@@ -3,20 +3,20 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const { buildGraphFromSchemas } = require("./schemaGraph");
+const { buildConceptGraphFromFile } = require("./conceptGraph");
 
-const cors = require('cors');
 const app = express();
-app.use(cors()); // Enables CORS for all origins and routes
+
 app.use(express.json());
 
-// Static frontend
+// Static frontend (Vite build or public assets if you’re still doing that)
 app.use(express.static(path.join(__dirname, "public")));
 
 // Directories to scan for schemas / docs / concepts
 // e.g. SCHEMA_DIRS=examples,more_examples
 const SCHEMA_DIRS = (process.env.SCHEMA_DIRS || "examples")
   .split(",")
-  .map(p => path.resolve(p.trim()))
+  .map((p) => path.resolve(p.trim()))
   .filter(Boolean);
 
 console.log("Schema dirs:", SCHEMA_DIRS.join(", "));
@@ -37,7 +37,7 @@ app.get("/graph", (req, res) => {
 
 function scanFilesByExt(rootDirs, exts) {
   const results = [];
-  const lowerExts = new Set(exts.map(e => e.toLowerCase()));
+  const lowerExts = new Set(exts.map((e) => e.toLowerCase()));
 
   function walk(dir) {
     let entries;
@@ -89,11 +89,23 @@ app.get("/files", (req, res) => {
   }
 });
 
+// ---------- /concepts : convenience endpoint (just concept files) ----------
+
+app.get("/concepts", (req, res) => {
+  try {
+    const concepts = scanFilesByExt(SCHEMA_DIRS, [".concept"]);
+    res.json({ concepts });
+  } catch (err) {
+    console.error("Error scanning concept files:", err);
+    res.status(500).json({ error: "Failed to scan concept files" });
+  }
+});
+
 // ---------- /file : return raw file content (for viewer) ----------
 
 function isPathInsideAllowedRoot(fullPath) {
   const resolved = path.resolve(fullPath);
-  return SCHEMA_DIRS.some(root => resolved.startsWith(root + path.sep));
+  return SCHEMA_DIRS.some((root) => resolved.startsWith(root + path.sep));
 }
 
 app.get("/file", (req, res) => {
@@ -114,6 +126,30 @@ app.get("/file", (req, res) => {
     }
     res.type("text/plain").send(data);
   });
+});
+
+// ---------- /concept-graph : graph from a .concept DSL file ----------
+//
+// GET /concept-graph?path=/abs/path/to/file.concept
+//
+app.get("/concept-graph", (req, res) => {
+  const filePath = req.query.path;
+  if (!filePath) {
+    return res.status(400).json({ error: "Missing path query parameter" });
+  }
+
+  const resolved = path.resolve(filePath);
+  if (!isPathInsideAllowedRoot(resolved)) {
+    return res.status(403).json({ error: "Access denied" });
+  }
+
+  try {
+    const graph = buildConceptGraphFromFile(resolved);
+    res.json(graph); // { nodes: [...], edges: [...] }
+  } catch (err) {
+    console.error("Error building concept graph:", err);
+    res.status(500).json({ error: "Failed to build concept graph" });
+  }
 });
 
 // ---------- Start server ----------
