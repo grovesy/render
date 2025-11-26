@@ -1,13 +1,15 @@
-A DataDomain has many UseCases
-A UseCase has many DataConsumerRequirements
-A DataConsumerRequirement has many DataConsumerElements
-A DataConsumerRequirement has many BusinessRules
-A BusinessRule has many DataConsumerRequirements
-A BusinessRule has many LogicalRules
-A LogicalRule is implemented by many TechnicalRules
+A DataDomain has many UseCase
+A UseCase has many DataConsumerRequirement
+A DataConsumerRequirement has many DataConsumerElement
+A DataConsumerRequirement has many BusinessRule
+A BusinessRule has many DataConsumerRequirement
+A BusinessRule has many LogicalRule
+A LogicalRule is implemented by many TechnicalRule
 
-A Control has many TechnicalRules
-The execution of a Control produces DataQualityResults
-An Assessment has many TechnicalRules
-A ScoreCard is produced by running an Assessment on DataQualityResults
-A ScoreCard produces many DataQualityExceptions
+A Control has many TechnicalRule
+The execution of a Control produces DataQualityResult
+A Assessment has many TechnicalRule
+
+A ScoreCard has many DataQualityResult
+A ScoreCard produces many DataQualityException
+A Assessment produces many ScoreCard

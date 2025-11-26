@@ -89,10 +89,10 @@ body,
   flex: 1;
   min-height: 0; /* important so child can flex correctly */
   display: flex;
-  overflow: hidden; /* GraphView handles pan/zoom; no scroll here */
+  overflow: hidden; /* ModelGraphView handles pan/zoom; no scroll here */
 }
 
-/* GraphView root container (it sets more styles itself) */
+/* ModelGraphView root container (it sets more styles itself) */
 .graph-section > div {
   flex: 1;
 }

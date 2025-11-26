@@ -7,14 +7,18 @@ import {
   Box,
   AppBar,
   Toolbar,
-  Tabs,
-  Tab,
   Typography,
   Divider,
 } from "@mui/material";
+import LeftModeSwitcher from "./components/LeftModeSwitcher";
 import LeftSidebar from "./components/LeftSidebar";
-import GraphView from "./components/GraphView";
+import ADRSidebar from "./components/ADRSidebar";
+import RFModelGraphView from "./components/RFModelGraphView";
 import ConceptGraphView from "./components/ConceptGraphView";
+import ADRViewer from "./components/ADRViewer";
+import ApiClient from "./lib/ApiClient";
+
+const api = ApiClient; // shared API client
 
 // API base from Vite env: VITE_API_BASE_URL=http://localhost:3000
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL || "";
@@ -34,15 +38,19 @@ const theme = createTheme({
 });
 
 export default function App() {
-  const [tab, setTab] = useState("model");
+  const [leftMode, setLeftMode] = useState("models"); // 'models' | 'concepts' | 'adrs'
+  // main view is controlled by the left-mode switcher now
   const [fileIndex, setFileIndex] = useState({
     jsonModels: [],
     markdown: [],
     concepts: [],
   });
 
+  const [adrs, setAdrs] = useState([]);
+
   const [selectedModelKey, setSelectedModelKey] = useState(null); // `${domain}:${model}`
   const [selectedConceptPath, setSelectedConceptPath] = useState(null);
+  const [selectedADRPath, setSelectedADRPath] = useState(null);
 
   const [filesError, setFilesError] = useState("");
 
@@ -50,9 +58,7 @@ export default function App() {
   useEffect(() => {
     async function loadFiles() {
       try {
-        const res = await fetch(`${API_BASE}/files`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await api.fetchFilesIndex();
         setFileIndex(data);
         setFilesError("");
       } catch (err) {
@@ -63,13 +69,23 @@ export default function App() {
     loadFiles();
   }, []);
 
+  // -------- Fetch /adrs once ----------
+  useEffect(() => {
+    async function loadADRs() {
+      try {
+        const data = await api.fetchADRs();
+        setAdrs(data.adrs || []);
+      } catch (err) {
+        console.error("[App] Failed to load /adrs:", err);
+      }
+    }
+    loadADRs();
+  }, []);
+
   // -------- Handle JSON file click (resolve to `${domain}:${model}`) ----------
   const handleJsonFileClick = useCallback(async (filePath) => {
     try {
-      const url = `${API_BASE}/file?path=${encodeURIComponent(filePath)}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
+      const text = await api.fetchFileContent(filePath);
       let schema;
       try {
         schema = JSON.parse(text);
@@ -107,7 +123,7 @@ export default function App() {
       });
 
       setSelectedModelKey(key);
-      setTab("model");
+      setLeftMode("models");
     } catch (err) {
       console.error("[App] handleJsonFileClick error:", err);
     }
@@ -117,12 +133,16 @@ export default function App() {
   const handleConceptFileClick = useCallback((filePath) => {
     console.log("[App] Selecting concept file:", filePath);
     setSelectedConceptPath(filePath);
-    setTab("concept");
+    setLeftMode("concepts");
   }, []);
 
-  const handleTabChange = (event, value) => {
-    setTab(value);
-  };
+  // -------- Handle ADR click ----------
+  const handleADRClick = useCallback((filePath) => {
+    console.log("[App] Selecting ADR:", filePath);
+    setSelectedADRPath(filePath);
+  }, []);
+
+  // tabs removed — left-mode controls the main view
 
   return (
     <ThemeProvider theme={theme}>
@@ -134,16 +154,7 @@ export default function App() {
             <Typography variant="h6" sx={{ flexShrink: 0 }}>
               Schema & Concept Explorer
             </Typography>
-            <Tabs
-              value={tab}
-              onChange={handleTabChange}
-              textColor="primary"
-              indicatorColor="primary"
-              sx={{ ml: 4 }}
-            >
-              <Tab value="model" label="Model" />
-              <Tab value="concept" label="Concept" />
-            </Tabs>
+            {/* The model/concept selector moved to the left sidebar */}
           </Toolbar>
         </AppBar>
 
@@ -156,23 +167,30 @@ export default function App() {
           }}
         >
           {/* Left sidebar */}
-          <Box
-            sx={{
-              width: 260,
-              borderRight: 1,
-              borderColor: "divider",
-              bgcolor: "background.paper",
-              display: "flex",
-              flexDirection: "column",
-              minHeight: 0,
-            }}
-          >
+          <Box sx={{ display: "flex", borderRight: 1, borderColor: "divider", minHeight: 0 }}>
+            <LeftModeSwitcher
+              mode={leftMode}
+              onChange={(mode) => {
+                setLeftMode(mode);
+              }}
+            />
+
+            <Box
+              sx={{
+                width: 260,
+                bgcolor: "background.paper",
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 0,
+                borderLeft: "1px solid #4a4a4a",
+              }}
+            >
             <Box sx={{ p: 1 }}>
               <Typography
                 variant="caption"
                 sx={{ textTransform: "uppercase", color: "text.secondary" }}
               >
-                Files
+                {leftMode === "models" ? "Models" : leftMode === "concepts" ? "Concepts" : "ADRs"}
               </Typography>
             </Box>
             <Divider />
@@ -180,13 +198,21 @@ export default function App() {
               <Box sx={{ p: 1, color: "error.main", fontSize: 12 }}>
                 {filesError}
               </Box>
+            ) : leftMode === "adrs" ? (
+              <ADRSidebar
+                adrs={adrs}
+                selectedPath={selectedADRPath}
+                onADRClick={handleADRClick}
+              />
             ) : (
               <LeftSidebar
                 fileIndex={fileIndex}
                 onJsonFileClick={handleJsonFileClick}
                 onConceptFileClick={handleConceptFileClick}
+                viewMode={leftMode === "models" ? "models" : leftMode === "concepts" ? "concepts" : "all"}
               />
             )}
+            </Box>
           </Box>
 
           {/* Main graph view */}
@@ -199,10 +225,12 @@ export default function App() {
               bgcolor: "#f9fafb",
             }}
           >
-            {tab === "model" ? (
-              <GraphView selectedKey={selectedModelKey} />
-            ) : (
+            {leftMode === "models" ? (
+              <RFModelGraphView selectedKey={selectedModelKey} />
+            ) : leftMode === "concepts" ? (
               <ConceptGraphView conceptPath={selectedConceptPath} />
+            ) : (
+              <ADRViewer selectedPath={selectedADRPath} />
             )}
           </Box>
         </Box>

@@ -24,17 +24,16 @@ export default function LeftSidebar({
   fileIndex,
   onJsonFileClick,
   onConceptFileClick,
+  viewMode = "all", // 'models' | 'concepts' | 'all'
 }) {
   const { jsonModels = [], concepts = [] } = fileIndex;
 
   const jsonGroups = groupByDir(jsonModels);
   const conceptGroups = groupByDir(concepts);
 
-  return (
-    <Box sx={{ flex: 1, overflowY: "auto" }}>
-      {/* JSON Models */}
-      <List
-        dense
+  const modelsSection = (
+    <List
+      dense
         subheader={
           <ListSubheader
             component="div"
@@ -80,26 +79,11 @@ export default function LeftSidebar({
             ))}
           </Box>
         ))}
-      </List>
+    </List>
+  );
 
-      {/* Concept Files */}
-      <List
-        dense
-        subheader={
-          <ListSubheader
-            component="div"
-            sx={{
-              bgcolor: "background.paper",
-              textTransform: "uppercase",
-              fontSize: 11,
-              letterSpacing: "0.08em",
-              color: "text.secondary",
-            }}
-          >
-            Concept Files
-          </ListSubheader>
-        }
-      >
+  const conceptsSection = (
+    <List dense>
         {Object.keys(conceptGroups).length === 0 && (
           <Typography
             variant="caption"
@@ -130,7 +114,13 @@ export default function LeftSidebar({
             ))}
           </Box>
         ))}
-      </List>
+    </List>
+  );
+
+  return (
+    <Box sx={{ flex: 1, overflowY: "auto" }}>
+      {viewMode !== "concepts" && modelsSection}
+      {viewMode !== "models" && conceptsSection}
     </Box>
   );
 }
