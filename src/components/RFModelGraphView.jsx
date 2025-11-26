@@ -56,18 +56,24 @@ function JsonHighlighter({ code }) {
       // If not valid JSON, use as-is
     }
 
+    // Escape HTML first
+    const escaped = formattedText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
     // Apply syntax highlighting
-    const highlighted = formattedText
+    const highlighted = escaped
       .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, (match) => {
         if (/:$/.test(match)) {
           // Property key
-          return `<span style="color: #0451a5; font-weight: 500;">${match}</span>`;
+          return `<span style="color:#0451a5;font-weight:bold">${match}</span>`;
         }
         // String value
-        return `<span style="color: #a31515;">${match}</span>`;
+        return `<span style="color:#a31515">${match}</span>`;
       })
-      .replace(/\b(true|false|null)\b/g, '<span style="color: #0000ff; font-weight: 600;">$1</span>')
-      .replace(/\b(-?\d+\.?\d*)\b/g, '<span style="color: #098658;">$1</span>');
+      .replace(/\b(true|false|null)\b/g, '<span style="color:#0000ff;font-weight:bold">$1</span>')
+      .replace(/\b(-?\d+\.?\d*)\b/g, '<span style="color:#098658">$1</span>');
 
     return highlighted;
   };
