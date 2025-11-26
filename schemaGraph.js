@@ -144,7 +144,7 @@ function loadSchemasFromDir(dirPaths) {
       try {
         const text = fs.readFileSync(p, "utf8");
         const data = JSON.parse(text);
-        schemas.push(data);
+        schemas.push({ schema: data, filePath: p });
       } catch (err) {
         console.warn(`Warning: failed to read/parse ${p}:`, err.message);
       }
@@ -161,7 +161,9 @@ function buildGraphFromSchemas(schemaDirs) {
   const schemas = loadSchemasFromDir(schemaDirs);
   const entities = [];
 
-  for (const schema of schemas) {
+  for (const schemaObj of schemas) {
+    const schema = schemaObj.schema;
+    const filePath = schemaObj.filePath;
     const idStr = schema.$id || schema.id;
     if (!idStr) continue;
 
@@ -207,7 +209,8 @@ function buildGraphFromSchemas(schemaDirs) {
       model: modelName,
       title,
       attrs,
-      refs: dedupedRefs
+      refs: dedupedRefs,
+      filePath
     });
   }
 

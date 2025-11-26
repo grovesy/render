@@ -148,13 +148,17 @@ export default function RFModelGraphView({ selectedKey }) {
       const canvasCenterX = 900;
       const canvasCenterY = 600;
       
-      // Position link tables in the center
-      const linkSpacing = 150;
+      // Position link tables in the center - stack vertically if multiple
+      const linkSpacing = 200;
+      const linkVerticalSpacing = 250;
       linkTables.forEach((n, idx) => {
-        const offsetX = (idx - (linkTables.length - 1) / 2) * linkSpacing;
+        const row = Math.floor(idx / 2); // 2 per row
+        const col = idx % 2;
+        const offsetX = (col - 0.5) * linkSpacing;
+        const offsetY = (row - (Math.ceil(linkTables.length / 2) - 1) / 2) * linkVerticalSpacing;
         positionedNodes.push({
           ...n,
-          position: { x: canvasCenterX + offsetX, y: canvasCenterY }
+          position: { x: canvasCenterX + offsetX, y: canvasCenterY + offsetY }
         });
       });
 
@@ -168,13 +172,19 @@ export default function RFModelGraphView({ selectedKey }) {
       const domains = Object.keys(factsByDomain);
       const domainRadius = 600;
 
+      // Calculate vertical space needed for link tables
+      const linkTableRows = Math.ceil(linkTables.length / 2);
+      const linkTableHeight = linkTableRows * 250;
+      const domainVerticalOffset = Math.max(300, linkTableHeight / 2 + 150); // Ensure clearance from link tables
+
       domains.forEach((domain, domainIdx) => {
         const factsInDomain = factsByDomain[domain];
         
         // Position domain cluster left or right of center
         const isLeft = domainIdx % 2 === 0;
         const domainCenterX = isLeft ? canvasCenterX - domainRadius : canvasCenterX + domainRadius;
-        const domainCenterY = canvasCenterY + (domainIdx - domains.length / 2) * 200;
+        // Spread domains vertically with enough space to avoid link tables
+        const domainCenterY = canvasCenterY + (domainIdx - (domains.length - 1) / 2) * domainVerticalOffset;
 
         // Track bounds for this domain
         let minX = domainCenterX, maxX = domainCenterX, minY = domainCenterY, maxY = domainCenterY;
@@ -303,8 +313,8 @@ export default function RFModelGraphView({ selectedKey }) {
         return;
       }
       try {
-        // Construct file path from entity metadata
-        const filePath = `examples/${selectedEntity.domain}/${selectedEntity.model}.json`;
+        // Use file path from entity metadata, or construct as fallback
+        const filePath = selectedEntity.filePath || `examples/${selectedEntity.domain}/${selectedEntity.model}.json`;
         const raw = await api.fetchFileContent(filePath);
         setRawJson(raw);
         

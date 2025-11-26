@@ -35,7 +35,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Directories to scan for schemas / docs / concepts
 // e.g. SCHEMA_DIRS=examples,more_examples
-const SCHEMA_DIRS = (process.env.SCHEMA_DIRS || "examples")
+const SCHEMA_DIRS = (process.env.SCHEMA_DIRS || "examples,codification")
   .split(",")
   .map((p) => path.resolve(p.trim()))
   .filter(Boolean);
