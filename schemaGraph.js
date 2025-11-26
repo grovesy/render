@@ -1,20 +1,15 @@
 // schemaGraph.js
 // Build a graph description from JSON Schema files for the UML front-end.
 //
-// Output shape for /graph:
-//
+// Output:
 // {
 //   entities: [
 //     {
 //       domain: "contact.org.biz",
 //       model: "address",
 //       title: "Address",
-//       attrs: [
-//          { field: "addressId", type: "string" },
-//          { field: "address.line1", type: "string" },
-//          ...
-//       ],
-//       refs:  [{ field: "owners", ref: "data://contact.org.biz/model/1/contact" }]
+//       attrs: [{ field: "address.line1", type: "string" }, ...],
+//       refs:  [{ field: "owners", ref: "data://..." }, ...]
 //     },
 //     ...
 //   ]
@@ -69,16 +64,6 @@ function inferTypeForProperty(node) {
   return "any";
 }
 
-/**
- * Recursively collect all $ref nodes under `schemaNode`,
- * attributing them to the *fieldPath* (top-level or nested).
- *
- * Covers:
- *   - direct $ref on the property
- *   - $ref inside array items
- *   - $ref nested inside object properties in that property
- *   - $ref inside allOf / oneOf / anyOf inside that property
- */
 function collectRefs(schemaNode, fieldPath, outRefs) {
   if (!schemaNode || typeof schemaNode !== "object") return;
 
@@ -86,12 +71,10 @@ function collectRefs(schemaNode, fieldPath, outRefs) {
     outRefs.push({ field: fieldPath, ref: schemaNode.$ref });
   }
 
-  // Arrays: recurse into items
   if (schemaNode.type === "array" && schemaNode.items) {
     collectRefs(schemaNode.items, fieldPath, outRefs);
   }
 
-  // Nested object properties
   if (schemaNode.properties && typeof schemaNode.properties === "object") {
     Object.entries(schemaNode.properties).forEach(([name, child]) => {
       const nestedPath = fieldPath ? `${fieldPath}.${name}` : name;
@@ -99,7 +82,6 @@ function collectRefs(schemaNode, fieldPath, outRefs) {
     });
   }
 
-  // Composition keywords
   ["allOf", "anyOf", "oneOf"].forEach(key => {
     if (Array.isArray(schemaNode[key])) {
       schemaNode[key].forEach(child => collectRefs(child, fieldPath, outRefs));
@@ -107,34 +89,21 @@ function collectRefs(schemaNode, fieldPath, outRefs) {
   });
 }
 
-/**
- * Recursively flatten attributes from a "properties" block.
- *
- * - prefix "" => "address"
- * - prefix "address" + child "line1" => "address.line1"
- *
- * Also handles arrays whose items are objects:
- *   orders[].amount, orders[].currency, etc.
- */
 function collectAttributes(props, prefix, attrsOut, refsOut) {
   if (!props || typeof props !== "object") return;
 
   Object.entries(props).forEach(([name, propSchema]) => {
     const fieldPath = prefix ? `${prefix}.${name}` : name;
 
-    // Attribute for this property itself
     const typeLabel = inferTypeForProperty(propSchema);
     attrsOut.push({ field: fieldPath, type: typeLabel });
 
-    // Foreign keys anywhere under this property
     collectRefs(propSchema, fieldPath, refsOut);
 
-    // Flatten nested object properties
     if (propSchema && propSchema.type === "object" && propSchema.properties) {
       collectAttributes(propSchema.properties, fieldPath, attrsOut, refsOut);
     }
 
-    // Flatten arrays-of-objects: orders[].amount, etc.
     if (
       propSchema &&
       propSchema.type === "array" &&
@@ -154,9 +123,20 @@ function loadSchemasFromDir(dirPaths) {
   const schemas = [];
 
   const walk = p => {
-    const stat = fs.statSync(p);
+    let stat;
+    try {
+      stat = fs.statSync(p);
+    } catch {
+      return;
+    }
+
     if (stat.isDirectory()) {
-      const entries = fs.readdirSync(p);
+      let entries;
+      try {
+        entries = fs.readdirSync(p);
+      } catch {
+        return;
+      }
       for (const name of entries) {
         walk(path.join(p, name));
       }
@@ -199,28 +179,25 @@ function buildGraphFromSchemas(schemaDirs) {
     const attrs = [];
     const refs = [];
 
-    // Flatten top-level + nested properties
     if (schema.properties && typeof schema.properties === "object") {
       collectAttributes(schema.properties, "", attrs, refs);
     }
 
-    // ---- DEDUPE refs, normalizing array paths ----
-    // Treat "owners" and "owners[]" (and any field with [] segments) as
-    // the same FK for dedupe purposes, so we don't get double edges.
+    // dedupe refs, normalising away [] in paths
     const seen = new Set();
     const dedupedRefs = [];
     for (const r of refs) {
       if (!r || !r.ref) continue;
 
       const rawField = typeof r.field === "string" ? r.field : "";
-      const normField = rawField.replace(/\[\]/g, ""); // strip [] anywhere
+      const normField = rawField.replace(/\[\]/g, "");
 
       const key = `${normField}||${r.ref}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
       dedupedRefs.push({
-        field: normField, // use clean label in the diagram
+        field: normField,
         ref: r.ref
       });
     }

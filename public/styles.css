@@ -1,50 +1,187 @@
-body, html {
+/* ---------- Global: lock page, use full viewport ---------- */
+
+html,
+body {
   margin: 0;
   padding: 0;
-  font-family: system-ui, sans-serif;
-}
-
-.app-header {
-  background: #0d1b2a;
-  color: white;
-  padding: 16px;
-}
-
-.app-title {
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.app-subtitle {
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-.app-layout {
-  display: flex;
-  height: calc(100vh - 70px);
-}
-
-.sidebar {
-  width: 250px;
-  background: #f7f7f7;
-  border-right: 1px solid #ccc;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.main-panel {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-
-.paper-container {
-  width: 100%;
   height: 100%;
+  overflow: hidden;               /* ❗ no page scrolling */
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   background: #ffffff;
+  color: #111827;
 }
 
-.joint-type-uml-class text {
+#app {
+  display: flex;
+  height: 100vh;                  /* fill viewport */
+}
+
+/* ---------- Sidebar (LEFT) ---------- */
+
+#sidebar {
+  width: 260px;
+  background: #020617;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 10px;
+  box-sizing: border-box;
+}
+
+#sidebar h1 {
+  font-size: 16px;
+  margin: 0 0 8px 0;
+  color: #f9fafb;
+}
+
+#nav-content {
+  flex: 1;
+  overflow-y: auto;               /* nav itself scrolls if long */
+  padding-right: 4px;
+}
+
+.nav-section {
+  margin-bottom: 16px;
+}
+
+.nav-section h2 {
   font-size: 12px;
+  margin: 10px 0 4px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.nav-section ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-section li {
+  font-size: 12px;
+  padding: 4px 6px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #e5e7eb;
+}
+
+.nav-section li:hover {
+  background: #1f2937;
+}
+
+.nav-section li.active {
+  background: #2563eb;
+}
+
+/* ---------- Main layout (center + right stay fixed) ---------- */
+
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  height: 100vh;                  /* lock to viewport height */
+  overflow: hidden;               /* children manage their own scroll */
+}
+
+/* ---------- Graph panel (CENTER) ---------- */
+
+#graph-panel {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+  background: #ffffff;
+  height: 100%;
+}
+
+#graph-panel h2 {
+  margin: 8px 10px;
+  font-size: 16px;
+  color: #111827;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+}
+
+/* JointJS canvas wrapper: THIS is what scrolls */
+#paper {
+  flex: 1;
+  background: #ffffff;
+  overflow: auto;                 /* ❗ scroll diagram here */
+}
+
+/* footer details under graph, fixed within panel */
+#details {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  color: #111827;
+  white-space: pre-wrap;
+}
+
+/* ---------- File viewer (RIGHT) ---------- */
+
+#file-panel {
+  flex: 1.2;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  height: 100%;
+}
+
+#file-title {
+  margin: 8px 10px;
+  font-size: 14px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+  color: #111827;
+}
+
+/* Viewer content scrolls independently */
+#file-viewer {
+  flex: 1;
+  overflow: auto;                 /* ❗ scroll file content here */
+  padding: 10px;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #111827;
+  border-left: 1px solid #e5e7eb;
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+}
+
+/* Markdown styling */
+
+#file-viewer h1,
+#file-viewer h2,
+#file-viewer h3 {
+  margin-top: 0.8em;
+  margin-bottom: 0.4em;
+}
+
+#file-viewer p {
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+}
+
+#file-viewer code {
+  background: #f3f4f6;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+#file-viewer pre {
+  background: #f9fafb;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+/* Optional: lighten JointJS dot grid on white background */
+.joint-paper-grid {
+  background-color: #ffffff !important;
 }

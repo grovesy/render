@@ -1,58 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Schema UML Viewer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+<head>
+  <meta charset="UTF-8" />
+  <title>Data Model Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- JointJS dependencies (order matters) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.4.1/backbone-min.js"></script>
+  <!-- Base App Styles -->
+  <link rel="stylesheet" href="styles.css" />
 
-    <!-- graphlib + dagre for DirectedGraph layout -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/graphlib/2.1.8/graphlib.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js"></script>
+  <!-- ✅ REQUIRED JS DEPENDENCIES IN ORDER -->
 
-    <!-- JointJS full build (includes joint.ui.* like PaperScroller) -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/jointjs/dist/joint.css"
-    />
-    <script src="https://cdn.jsdelivr.net/npm/jointjs/dist/joint.js"></script>
+  <!-- 1) jQuery (JointJS relies on it for event handling) -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <!-- Your custom styles -->
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header class="app-header">
-      <div class="app-title">Schema UML Viewer</div>
-      <div class="app-subtitle">
-        Domains, entities &amp; foreign-key links (UML class style)
-      </div>
-    </header>
+  <!-- 2) Lodash (Backbone + JointJS depend on it) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
 
-    <div class="app-layout">
-      <!-- Sidebar with legend + details -->
-      <aside class="sidebar">
-        <h2>Legend</h2>
-        <ul>
-          <li>UML Class = Schema entity</li>
-          <li>Italic CAPS line = Domain</li>
-          <li>Arrow = Foreign key ($ref)</li>
-        </ul>
+  <!-- 3) Backbone (depends on lodash + jQuery) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.4.1/backbone-min.js"></script>
 
-        <h2>Details</h2>
+  <!-- 4) Graphlib + Dagre (MANDATORY for JointJS auto layout) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/graphlib/2.1.8/graphlib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js"></script>
+
+  <!-- 5) JointJS (UML diagram + renderer) -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/jointjs@3.7.5/dist/joint.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jointjs@3.7.5/dist/joint.js"></script>
+
+  <!-- 6) Markdown renderer for .md viewer -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+
+<body>
+  <div id="app">
+
+    <!-- ✅ Sidebar Navigator -->
+    <aside id="sidebar">
+      <h1>Navigator</h1>
+      <div id="nav-content"></div>
+    </aside>
+
+    <!-- ✅ Main Layout -->
+    <main id="main">
+
+      <!-- UML Graph Panel -->
+      <section id="graph-panel">
+        <h2>Schema Diagram</h2>
+        <div id="paper"></div>
         <pre id="details">Select a class…</pre>
-      </aside>
+      </section>
 
-      <!-- Main panel: JointJS canvas (PaperScroller attaches here) -->
-      <main class="main-panel">
-        <div id="paper" class="paper-container"></div>
-      </main>
-    </div>
+      <!-- File Viewer Panel -->
+      <section id="file-panel">
+        <h2 id="file-title">File Viewer</h2>
+        <div id="file-viewer"></div>
+      </section>
 
-    <!-- App logic -->
-    <script src="app.js"></script>
-  </body>
+    </main>
+  </div>
+
+  <!-- ✅ Your application logic — MUST load LAST -->
+  <script src="app.js"></script>
+</body>
 </html>

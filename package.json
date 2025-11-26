@@ -1,16 +1,29 @@
 {
-  "name": "schema-graph-viewer",
+  "name": "schema-graph-material-ui",
   "version": "1.0.0",
-  "description": "Visualize JSON schema domains and relationships in a modern browser graph",
-  "main": "server.js",
+  "private": true,
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node server.js"
   },
   "dependencies": {
-    "express": "^4.19.0"
+    "@dagrejs/graphlib": "^2.2.4",
+    "@emotion/react": "^11.13.0",
+    "@emotion/styled": "^11.13.0",
+    "@mui/material": "^6.1.0",
+    "cors": "^2.8.5",
+    "dagre": "^0.8.5",
+    "dagrejs": "^0.2.1",
+    "express": "^4.19.2",
+    "graphlib": "^2.1.8",
+    "jointjs": "^3.7.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "@vitejs/plugin-react": "^4.3.2",
+    "vite": "^5.4.0"
   }
 }

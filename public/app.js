@@ -1,13 +1,39 @@
-// public/app.js — auto layout with DirectedGraph, domain-based horizontal offsets,
-// pan/zoom, rounded UML boxes, auto-sized width & height, centered on load.
+// public/app.js
+
+// -------------------------------------------------------------
+// API helpers (match your server.js)
+// -------------------------------------------------------------
 
 async function fetchGraph() {
   const res = await fetch("/graph");
   if (!res.ok) throw new Error("Failed to load graph: " + res.status);
-  return res.json();
+  const data = await res.json();
+  console.log("Graph data from /graph:", data);
+  return data;
 }
 
-function renderDetails(cell, container) {
+// /files → { jsonModels: [{path,name}], markdown: [...], concepts: [...] }
+async function fetchFilesIndex() {
+  const res = await fetch("/files");
+  if (!res.ok) throw new Error("Failed to load files index: " + res.status);
+  const data = await res.json();
+  console.log("Files index from /files:", data);
+  return data;
+}
+
+// /file?path=... returns plain text
+async function fetchFileContent(path) {
+  const res = await fetch(`/file?path=${encodeURIComponent(path)}`);
+  if (!res.ok) throw new Error("Failed to load file: " + res.status);
+  const text = await res.text();
+  return { path, content: text };
+}
+
+// -------------------------------------------------------------
+// UML entity details panel
+// -------------------------------------------------------------
+
+function renderEntityDetails(cell, container) {
   const data = cell?.get("schemaData");
   if (!data) {
     container.textContent = "Select a class…";
@@ -19,21 +45,146 @@ function renderDetails(cell, container) {
   lines.push(`Domain: ${data.domain}`);
   lines.push("");
   lines.push("Attributes:");
-  data.attrs.forEach(a => lines.push(`  - ${a.field}: ${a.type}`));
+  (data.attrs || []).forEach(a => {
+    lines.push(`  - ${a.field}: ${a.type}`);
+  });
 
-  if (data.refs.length) {
+  if (data.refs && data.refs.length) {
     lines.push("");
     lines.push("Foreign keys:");
-    data.refs.forEach(r =>
-      lines.push(`  - ${r.field} → ${r.ref}`)
-    );
+    data.refs.forEach(r => {
+      lines.push(`  - ${r.field} → ${r.ref}`);
+    });
   }
 
   container.textContent = lines.join("\n");
 }
 
-async function init() {
-  const graphData = await fetchGraph();
+// -------------------------------------------------------------
+// File viewer (right-hand panel)
+// -------------------------------------------------------------
+
+function clearActiveNav() {
+  document
+    .querySelectorAll("#nav-content li")
+    .forEach(li => li.classList.remove("active"));
+}
+
+function guessFileKind(path, fallbackKind) {
+  const lower = path.toLowerCase();
+  if (lower.endsWith(".json")) return "json";
+  if (lower.endsWith(".md") || lower.endsWith(".markdown")) return "markdown";
+  if (lower.endsWith(".concept")) return "concept";
+  return fallbackKind || "text";
+}
+
+async function handleNavClick(li) {
+  const fullPath = li.dataset.path;
+  const kindHint = li.dataset.kind;
+
+  clearActiveNav();
+  li.classList.add("active");
+
+  const titleEl = document.getElementById("file-title");
+  const viewer = document.getElementById("file-viewer");
+
+  if (!titleEl || !viewer) {
+    console.warn("file-title or file-viewer not found in DOM");
+    return;
+  }
+
+  titleEl.textContent = fullPath;
+  viewer.textContent = "Loading…";
+
+  try {
+    const { content } = await fetchFileContent(fullPath);
+    const kind = guessFileKind(fullPath, kindHint);
+
+    if (kind === "json") {
+      try {
+        const obj = JSON.parse(content);
+        viewer.textContent = JSON.stringify(obj, null, 2);
+      } catch (e) {
+        viewer.textContent = content; // fallback if not valid JSON
+      }
+    } else if (kind === "markdown") {
+      if (window.marked && typeof window.marked.parse === "function") {
+        viewer.innerHTML = window.marked.parse(content);
+      } else {
+        viewer.textContent = content;
+      }
+    } else {
+      viewer.textContent = content; // concept / text
+    }
+  } catch (err) {
+    console.error("Failed to load file:", err);
+    viewer.textContent = "Error loading file (see console).";
+  }
+}
+
+// -------------------------------------------------------------
+// Navigator (left sidebar)
+// -------------------------------------------------------------
+
+function makeSection(title, kind, items) {
+  const section = document.createElement("div");
+  section.className = "nav-section";
+
+  const h2 = document.createElement("h2");
+  h2.textContent = title;
+  section.appendChild(h2);
+
+  const ul = document.createElement("ul");
+
+  items.forEach(item => {
+    // item: { path, name }
+    const li = document.createElement("li");
+    li.textContent = item.name || item.path;
+    li.dataset.path = item.path;
+    li.dataset.kind = kind;
+
+    li.addEventListener("click", () => handleNavClick(li));
+
+    ul.appendChild(li);
+  });
+
+  section.appendChild(ul);
+  return section;
+}
+
+function renderNavigator(filesIndex) {
+  const nav = document.getElementById("nav-content");
+  if (!nav) return;
+
+  nav.innerHTML = "";
+
+  if (filesIndex.jsonModels && filesIndex.jsonModels.length) {
+    nav.appendChild(
+      makeSection("JSON MODELS", "json", filesIndex.jsonModels)
+    );
+  }
+
+  if (filesIndex.markdown && filesIndex.markdown.length) {
+    nav.appendChild(
+      makeSection("MARKDOWN", "markdown", filesIndex.markdown)
+    );
+  }
+
+  if (filesIndex.concepts && filesIndex.concepts.length) {
+    nav.appendChild(
+      makeSection("CONCEPTS", "concept", filesIndex.concepts)
+    );
+  }
+}
+
+// -------------------------------------------------------------
+// UML Diagram (JointJS) – NO DAGRE, manual grid layout
+// -------------------------------------------------------------
+
+function buildGraph(graphData) {
+  if (!window.joint || !joint.dia || !joint.dia.Graph) {
+    throw new Error("JointJS not loaded – check script imports in index.html");
+  }
 
   const graph = new joint.dia.Graph();
   const paperContainer = document.getElementById("paper");
@@ -41,123 +192,84 @@ async function init() {
   const paper = new joint.dia.Paper({
     el: paperContainer,
     model: graph,
-    width: 5000,
+    width: 4000,
     height: 4000,
     gridSize: 10,
-    drawGrid: true
+    drawGrid: { name: "dot" },
+    background: { color: "#ffffff" },
+    interactive: { linkMove: false }
   });
 
-  // ---------- PAN + ZOOM ----------
-  let isPanning = false;
-  let panStart = { x: 0, y: 0 };
-  let lastTranslate = { x: 0, y: 0 };
-  let zoomLevel = 1;
-
-  paperContainer.addEventListener("mousedown", (e) => {
-    if (e.target.tagName === "svg" || e.target === paperContainer) {
-      isPanning = true;
-      panStart = { x: e.clientX, y: e.clientY };
-    }
-  });
-
-  window.addEventListener("mousemove", (e) => {
-    if (!isPanning) return;
-    const dx = e.clientX - panStart.x;
-    const dy = e.clientY - panStart.y;
-    const newX = lastTranslate.x + dx;
-    const newY = lastTranslate.y + dy;
-    paper.translate(newX, newY);
-  });
-
-  window.addEventListener("mouseup", (e) => {
-    if (isPanning) {
-      const dx = e.clientX - panStart.x;
-      const dy = e.clientY - panStart.y;
-      lastTranslate = {
-        x: lastTranslate.x + dx,
-        y: lastTranslate.y + dy
-      };
-    }
-    isPanning = false;
-  });
-
-  paperContainer.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.1 : -0.1;
-    zoomLevel = Math.min(2.0, Math.max(0.2, zoomLevel + delta));
-    paper.scale(zoomLevel);
-  });
-
-  // ---------- BUILD UML CLASSES ----------
   const uml = joint.shapes.uml;
-  const entityCells = {};  // key: `${domain}:${model}` -> cell
+  const entityCells = {};
 
-  graphData.entities.forEach((e, idx) => {
-    const domainLabel = `*${e.domain.toUpperCase()}*`;
+  // Normalise graphData.entities
+  let entities = [];
+  if (graphData && Array.isArray(graphData.entities)) {
+    entities = graphData.entities;
+  } else if (Array.isArray(graphData)) {
+    entities = graphData;
+  } else {
+    console.warn("No entities found in /graph response:", graphData);
+  }
 
-    // Align "name  :  type" with monospace font
-    const fieldNames = e.attrs.map(a => a.field);
-    const maxFieldLen = fieldNames.length
-      ? fieldNames.reduce((m, s) => Math.max(m, s.length), 0)
-      : 0;
+  if (!entities.length) {
+    const detailsEl = document.getElementById("details");
+    if (detailsEl) {
+      detailsEl.textContent =
+        "No entities returned from /graph. Check schemaGraph.js or /graph JSON.";
+    }
+    return { graph, paper };
+  }
 
-    const attrLines = e.attrs.map(a =>
-      `${a.field.padEnd(maxFieldLen, " ")}  :  ${a.type}`
-    );
+  console.log("Entities to render:", entities);
 
-    // ---- Auto size based on content ----
-    const headerHeight = 50;   // title area
-    const lineHeight = 18;     // px per attribute line
-    const attrCount = attrLines.length || 1;
-    const height = headerHeight + lineHeight * attrCount;
+  // Manual grid layout: N columns, M rows
+  const cardW = 260;
+  const cardH = 160;
+  const marginX = 80;
+  const marginY = 80;
+  const colGap = 100;
+  const rowGap = 60;
 
-    // Approximate width from longest attribute line
-    const maxLineLen = attrLines.length
-      ? attrLines.reduce((m, s) => Math.max(m, s.length), 0)
-      : 10;
+  const cols = Math.max(1, Math.ceil(Math.sqrt(entities.length)));
 
-    const charWidth = 7;  // px per character for ~12px monospace
-    const padding = 40;   // left/right padding inside rect
-    let width = padding + maxLineLen * charWidth;
-    width = Math.max(220, Math.min(420, width)); // clamp between min & max
+  entities.forEach((e, idx) => {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+
+    const x = marginX + col * (cardW + colGap);
+    const y = marginY + row * (cardH + rowGap);
+
+    const domainLabel = e.domain ? `*${e.domain.toUpperCase()}*` : "";
+    const attrs = (e.attrs || []).map(a => `${a.field} : ${a.type}`);
 
     const cls = new uml.Class({
-      // temporary position; DirectedGraph will override
-      position: { x: 100 + idx * 20, y: 100 + idx * 20 },
-      size: { width, height },
-      name: `${domainLabel}\n${e.title}`,
-      attributes: attrLines,
+      position: { x, y },
+      size: { width: cardW, height: cardH },
+      name: domainLabel ? `${domainLabel}\n${e.title}` : e.title,
+      attributes: attrs,
       methods: [],
       attrs: {
         ".uml-class-name-rect": {
-          fill: "#0f172a",
-          stroke: "#1e293b",
-          "stroke-width": 1,
-          rx: 6,
-          ry: 6
+          fill: "#1e3a8a",
+          stroke: "#0f172a",
+          "stroke-width": 1
         },
         ".uml-class-name-text": {
-          fill: "#f1f5f9",
-          "font-size": 14,
-          "font-family": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-          "font-weight": "600",
-          "font-style": "italic"
+          fill: "#f9fafb",
+          "font-size": 12,
+          "font-style": "italic",
+          "font-weight": 600
         },
         ".uml-class-attrs-rect": {
           fill: "#3b82f6",
           stroke: "#1e3a8a",
-          "stroke-width": 1,
-          rx: 6,
-          ry: 6
+          "stroke-width": 1
         },
         ".uml-class-attrs-text": {
           fill: "#f9fafb",
-          "font-size": 12,
-          "font-family": "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-          "font-weight": "400",
-          "line-height": "1.5em",
-          "white-space": "pre",
-          "xml:space": "preserve"
+          "font-size": 11
         }
       }
     });
@@ -168,17 +280,17 @@ async function init() {
     entityCells[`${e.domain}:${e.model}`] = cls;
   });
 
-  // ---------- LINKS (foreign keys) ----------
-  graphData.entities.forEach(e => {
+  // Connect foreign-key refs
+  entities.forEach(e => {
     const src = entityCells[`${e.domain}:${e.model}`];
     if (!src) return;
 
-    e.refs.forEach(r => {
+    (e.refs || []).forEach(r => {
       const clean = r.ref.split("#")[0].replace("data://", "");
       const [refDomain, rest] = clean.split("/model/");
       if (!refDomain || !rest) return;
-
       const refModel = rest.split("/")[1];
+
       const tgt = entityCells[`${refDomain}:${refModel}`];
       if (!tgt) return;
 
@@ -193,19 +305,19 @@ async function init() {
                 text: r.field,
                 "font-size": 10,
                 fill: "#111827",
-                "font-family": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+                "font-family": "system-ui"
               }
             }
           }
         ],
         attrs: {
           line: {
-            stroke: "#111827",
+            stroke: "#6b7280",
             "stroke-width": 1.5,
             targetMarker: {
               type: "path",
               d: "M 10 -5 0 0 10 5 Z",
-              fill: "#111827"
+              fill: "#6b7280"
             }
           }
         }
@@ -213,95 +325,53 @@ async function init() {
     });
   });
 
-  // ---------- AUTOMATIC LAYOUT (DirectedGraph) ----------
-  joint.layout.DirectedGraph.layout(graph, {
-    setLinkVertices: true,
-    rankDir: "TB",     // Top -> Bottom
-    nodeSep: 180,      // min horizontal spacing between nodes
-    edgeSep: 60,       // min spacing between edges
-    rankSep: 280,      // vertical spacing between layers
-    marginX: 120,
-    marginY: 120
-  });
-
-  // ---------- DOMAIN-BASED HORIZONTAL OFFSETS ----------
-  const elements = graph.getElements();
-
-  // Collect domains from elements that have schemaData
-  const domainsSet = new Set();
-  elements.forEach(el => {
-    const data = el.get("schemaData");
-    if (data && data.domain) {
-      domainsSet.add(data.domain);
-    }
-  });
-
-  const domains = Array.from(domainsSet).sort();
-  const domainIndex = {};
-  domains.forEach((d, i) => {
-    domainIndex[d] = i;
-  });
-
-  // Compute global minimum X so we normalize positions before offsetting
-  let globalMinX = Infinity;
-  elements.forEach(el => {
-    const p = el.position();
-    if (p.x < globalMinX) globalMinX = p.x;
-  });
-  if (!isFinite(globalMinX)) globalMinX = 0;
-
-  const domainGap = 500; // how far apart each domain "band" is
-
-  elements.forEach(el => {
-    const data = el.get("schemaData");
-    if (!data || !data.domain) return;
-
-    const idx = domainIndex[data.domain] || 0;
-    const pos = el.position();
-
-    // Keep the relative X from DirectedGraph, just shift per-domain
-    const newX = (pos.x - globalMinX) + idx * domainGap;
-    el.position(newX, pos.y);
-  });
-
-  // ---------- CENTER WHOLE GRAPH IN VIEW ON LOAD ----------
-  function centerGraph() {
-    const bbox = graph.getBBox();
-    if (!bbox || !isFinite(bbox.x) || !isFinite(bbox.y)) return;
-
-    // reset zoom to 1 before centering
-    zoomLevel = 1;
-    paper.scale(zoomLevel);
-
-    const viewW = paperContainer.clientWidth || window.innerWidth || 1200;
-    const viewH = paperContainer.clientHeight || window.innerHeight || 800;
-
+  // Center the whole graph in view
+  const bbox = graph.getBBox();
+  if (bbox && isFinite(bbox.x) && isFinite(bbox.y)) {
+    const viewW = paperContainer.clientWidth || 1200;
+    const viewH = paperContainer.clientHeight || 800;
     const tx = (viewW - bbox.width) / 2 - bbox.x;
     const ty = (viewH - bbox.height) / 2 - bbox.y;
-
     paper.translate(tx, ty);
-    lastTranslate = { x: tx, y: ty };
   }
 
-  // Defer centering slightly to ensure layout + render completed
-  setTimeout(centerGraph, 80);
-
-  // ---------- DETAILS PANEL ----------
+  // Details panel hookup
   const detailsEl = document.getElementById("details");
 
   paper.on("element:pointerdown", view => {
-    renderDetails(view.model, detailsEl);
+    renderEntityDetails(view.model, detailsEl);
   });
 
   paper.on("blank:pointerdown", () => {
-    renderDetails(null, detailsEl);
+    renderEntityDetails(null, detailsEl);
   });
+
+  return { graph, paper };
 }
 
-// bootstrap
+// -------------------------------------------------------------
+// Init – render graph first, then sidebar
+// -------------------------------------------------------------
+
+async function init() {
+  try {
+    const graphData = await fetchGraph();
+    buildGraph(graphData);
+  } catch (err) {
+    console.error("Failed to init graph:", err);
+    alert("Failed to load schema graph – see console for details.");
+  }
+
+  try {
+    const filesIndex = await fetchFilesIndex();
+    renderNavigator(filesIndex);
+  } catch (err) {
+    console.warn("Failed to load file index (nav will be empty):", err);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   init().catch(err => {
-    console.error("Failed to init UML view:", err);
-    alert("Failed to load UML diagram – see console for details.");
+    console.error("Failed to init app:", err);
   });
 });
