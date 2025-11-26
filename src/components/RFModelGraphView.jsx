@@ -8,6 +8,78 @@ import { nodeTypes } from "./shared/GraphComponents";
 
 const api = ApiClient;
 
+// Collision detection and adjustment
+function adjustPositionForCollision(newNode, existingNodes, minPadding = 40) {
+  let { x, y } = newNode.position;
+  const width = newNode.width || 250;
+  const height = newNode.height || 200;
+  
+  let hasCollision = true;
+  let attempts = 0;
+  const maxAttempts = 50;
+  
+  while (hasCollision && attempts < maxAttempts) {
+    hasCollision = false;
+    
+    for (const existing of existingNodes) {
+      const exW = existing.width || 250;
+      const exH = existing.height || 200;
+      
+      // Check for overlap (with padding)
+      const overlapsX = x < existing.position.x + exW + minPadding && 
+                        x + width + minPadding > existing.position.x;
+      const overlapsY = y < existing.position.y + exH + minPadding && 
+                        y + height + minPadding > existing.position.y;
+      
+      if (overlapsX && overlapsY) {
+        hasCollision = true;
+        // Move down to avoid collision
+        y = existing.position.y + exH + minPadding;
+        break;
+      }
+    }
+    attempts++;
+  }
+  
+  return { x, y };
+}
+
+// Simple JSON syntax highlighter
+function JsonHighlighter({ code }) {
+  const highlightJson = (text) => {
+    // Try to parse and pretty-print if valid JSON
+    let formattedText = text;
+    try {
+      const parsed = JSON.parse(text);
+      formattedText = JSON.stringify(parsed, null, 2);
+    } catch {
+      // If not valid JSON, use as-is
+    }
+
+    // Apply syntax highlighting
+    const highlighted = formattedText
+      .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, (match) => {
+        if (/:$/.test(match)) {
+          // Property key
+          return `<span style="color: #0451a5; font-weight: 500;">${match}</span>`;
+        }
+        // String value
+        return `<span style="color: #a31515;">${match}</span>`;
+      })
+      .replace(/\b(true|false|null)\b/g, '<span style="color: #0000ff; font-weight: 600;">$1</span>')
+      .replace(/\b(-?\d+\.?\d*)\b/g, '<span style="color: #098658;">$1</span>');
+
+    return highlighted;
+  };
+
+  return (
+    <pre 
+      style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+      dangerouslySetInnerHTML={{ __html: highlightJson(code) }}
+    />
+  );
+}
+
 export default function RFModelGraphView({ selectedKey }) {
   const [elk, setElk] = useState(null);
   const [nodes, setNodes] = useState([]);
@@ -148,17 +220,30 @@ export default function RFModelGraphView({ selectedKey }) {
       const canvasCenterX = 900;
       const canvasCenterY = 600;
       
-      // Position link tables in the center - stack vertically if multiple
-      const linkSpacing = 200;
-      const linkVerticalSpacing = 250;
+      // Position link tables in the center - stack vertically if multiple with collision detection
+      const linkSpacing = 300;
+      const linkVerticalSpacing = 280;
       linkTables.forEach((n, idx) => {
         const row = Math.floor(idx / 2); // 2 per row
         const col = idx % 2;
         const offsetX = (col - 0.5) * linkSpacing;
         const offsetY = (row - (Math.ceil(linkTables.length / 2) - 1) / 2) * linkVerticalSpacing;
+        
+        const proposedPosition = { 
+          x: canvasCenterX + offsetX, 
+          y: canvasCenterY + offsetY 
+        };
+        
+        // Check for collisions with already positioned nodes
+        const adjustedPosition = adjustPositionForCollision(
+          { ...n, position: proposedPosition },
+          positionedNodes,
+          50
+        );
+        
         positionedNodes.push({
           ...n,
-          position: { x: canvasCenterX + offsetX, y: canvasCenterY + offsetY }
+          position: adjustedPosition
         });
       });
 
@@ -189,16 +274,23 @@ export default function RFModelGraphView({ selectedKey }) {
         // Track bounds for this domain
         let minX = domainCenterX, maxX = domainCenterX, minY = domainCenterY, maxY = domainCenterY;
 
-        // Main fact table(s) at domain center
+        // Main fact table(s) at domain center with collision detection
         const mainFact = factsInDomain[0];
+        const mainFactProposed = { x: domainCenterX, y: domainCenterY };
+        const mainFactAdjusted = adjustPositionForCollision(
+          { ...mainFact, position: mainFactProposed },
+          positionedNodes,
+          60
+        );
+        
         positionedNodes.push({
           ...mainFact,
-          position: { x: domainCenterX, y: domainCenterY }
+          position: mainFactAdjusted
         });
-        minX = Math.min(minX, domainCenterX);
-        maxX = Math.max(maxX, domainCenterX + (mainFact.width || 250));
-        minY = Math.min(minY, domainCenterY);
-        maxY = Math.max(maxY, domainCenterY + (mainFact.height || 200));
+        minX = Math.min(minX, mainFactAdjusted.x);
+        maxX = Math.max(maxX, mainFactAdjusted.x + (mainFact.width || 250));
+        minY = Math.min(minY, mainFactAdjusted.y);
+        maxY = Math.max(maxY, mainFactAdjusted.y + (mainFact.height || 200));
 
         // Dimension tables for this domain orbit around it (semi-circle on outer side)
         const dimsForDomain = dimensionTables.filter(d => d.data.domain === domain);
@@ -207,17 +299,25 @@ export default function RFModelGraphView({ selectedKey }) {
         dimsForDomain.forEach((n, idx) => {
           // Arrange vertically on the outer side
           const totalHeight = (dimsForDomain.length - 1) * 280;
-          const startY = domainCenterY - totalHeight / 2;
+          const startY = mainFactAdjusted.y - totalHeight / 2;
           const y = startY + idx * 280;
           const x = isLeft ? domainCenterX - clusterRadius : domainCenterX + clusterRadius;
+          
+          const proposedPosition = { x, y };
+          const adjustedPosition = adjustPositionForCollision(
+            { ...n, position: proposedPosition },
+            positionedNodes,
+            50
+          );
+          
           positionedNodes.push({
             ...n,
-            position: { x, y }
+            position: adjustedPosition
           });
-          minX = Math.min(minX, x);
-          maxX = Math.max(maxX, x + (n.width || 250));
-          minY = Math.min(minY, y);
-          maxY = Math.max(maxY, y + (n.height || 200));
+          minX = Math.min(minX, adjustedPosition.x);
+          maxX = Math.max(maxX, adjustedPosition.x + (n.width || 250));
+          minY = Math.min(minY, adjustedPosition.y);
+          maxY = Math.max(maxY, adjustedPosition.y + (n.height || 200));
         });
         
         // Store domain bounds with padding
@@ -453,9 +553,7 @@ export default function RFModelGraphView({ selectedKey }) {
                   bgcolor: '#f8f9fa',
                 }}
               >
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                  {rawJson || 'Loading...'}
-                </pre>
+                {rawJson ? <JsonHighlighter code={rawJson} /> : 'Loading...'}
               </Box>
             </>
           )}
