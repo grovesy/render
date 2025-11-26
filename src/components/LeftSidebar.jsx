@@ -61,7 +61,7 @@ export default function LeftSidebar({
           <Box key={dir}>
             <Typography
               variant="caption"
-              sx={{ px: 2, pt: 1, pb: 0.5, color: "text.secondary" }}
+              sx={{ px: 2, pt: 1, pb: 0.5, color: "text.primary", fontWeight: 700, fontSize: 12 }}
             >
               {dir}
             </Typography>
@@ -96,7 +96,7 @@ export default function LeftSidebar({
           <Box key={dir}>
             <Typography
               variant="caption"
-              sx={{ px: 2, pt: 1, pb: 0.5, color: "text.secondary" }}
+              sx={{ px: 2, pt: 1, pb: 0.5, color: "text.primary", fontWeight: 700, fontSize: 12 }}
             >
               {dir}
             </Typography>

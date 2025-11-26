@@ -253,7 +253,18 @@ export default function RFModelGraphView({ selectedKey }) {
         });
       });
 
-      // Group fact tables by domain and position in clusters
+      // Group ALL tables by domain (not just fact tables) - exclude isolated nodes
+      const nodesByDomain = {};
+      tempNodes.forEach(n => {
+        // Skip isolated nodes - they won't get domain boxes
+        if (isolatedNodes.includes(n)) return;
+        
+        const domain = n.data.domain;
+        if (!nodesByDomain[domain]) nodesByDomain[domain] = [];
+        nodesByDomain[domain].push(n);
+      });
+
+      // Group fact tables by domain for positioning
       const factsByDomain = {};
       factTables.forEach(n => {
         if (!factsByDomain[n.data.domain]) factsByDomain[n.data.domain] = [];
@@ -277,7 +288,7 @@ export default function RFModelGraphView({ selectedKey }) {
         // Spread domains vertically with enough space to avoid link tables
         const domainCenterY = canvasCenterY + (domainIdx - (domains.length - 1) / 2) * domainVerticalOffset;
 
-        // Track bounds for this domain
+        // Track bounds for this domain (no longer used for domain boxes, but kept for reference)
         let minX = domainCenterX, maxX = domainCenterX, minY = domainCenterY, maxY = domainCenterY;
 
         // Main fact table(s) at domain center with collision detection
@@ -325,9 +336,6 @@ export default function RFModelGraphView({ selectedKey }) {
           minY = Math.min(minY, adjustedPosition.y);
           maxY = Math.max(maxY, adjustedPosition.y + (n.height || 200));
         });
-        
-        // Store domain bounds with padding
-        domainBounds[domain] = { minX: minX - 60, maxX: maxX + 60, minY: minY - 80, maxY: maxY + 40 };
       });
 
       // Calculate the maximum Y position from all connected nodes
@@ -348,22 +356,96 @@ export default function RFModelGraphView({ selectedKey }) {
         });
       });
 
-      // Add domain box background nodes (z-index handled by insertion order)
+      // Add domain box background nodes - calculate bounds from ALL nodes in each domain
       const domainBoxNodes = [];
-      Object.entries(domainBounds).forEach(([domain, bounds]) => {
-        domainBoxNodes.push({
+      const placedDomainBoxes = []; // Track placed boxes for collision detection
+      const domainOffsets = {}; // Track how much each domain box was moved
+      
+      Object.keys(nodesByDomain).forEach(domain => {
+        const nodesInDomain = nodesByDomain[domain];
+        
+        // Find all positioned nodes for this domain
+        const domainPositionedNodes = positionedNodes.filter(pn => 
+          nodesInDomain.some(n => n.id === pn.id)
+        );
+        
+        if (domainPositionedNodes.length === 0) return;
+        
+        // Calculate bounds from all positioned nodes in this domain
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        
+        domainPositionedNodes.forEach(n => {
+          minX = Math.min(minX, n.position.x);
+          maxX = Math.max(maxX, n.position.x + (n.width || 250));
+          minY = Math.min(minY, n.position.y);
+          maxY = Math.max(maxY, n.position.y + (n.height || 200));
+        });
+        
+        // Add padding
+        const padding = { left: 60, right: 60, top: 80, bottom: 40 };
+        
+        let boxX = minX - padding.left;
+        let boxY = minY - padding.top;
+        const originalBoxY = boxY; // Track original position
+        const boxWidth = (maxX - minX) + padding.left + padding.right;
+        const boxHeight = (maxY - minY) + padding.top + padding.bottom;
+        
+        // Check for collision with other domain boxes and adjust position
+        let hasCollision = true;
+        let attempts = 0;
+        const maxAttempts = 50;
+        
+        while (hasCollision && attempts < maxAttempts) {
+          hasCollision = false;
+          
+          for (const placedBox of placedDomainBoxes) {
+            const overlapsX = boxX < placedBox.position.x + placedBox.data.width + 20 && 
+                              boxX + boxWidth + 20 > placedBox.position.x;
+            const overlapsY = boxY < placedBox.position.y + placedBox.data.height + 20 && 
+                              boxY + boxHeight + 20 > placedBox.position.y;
+            
+            if (overlapsX && overlapsY) {
+              hasCollision = true;
+              // Move down to avoid collision
+              boxY = placedBox.position.y + placedBox.data.height + 30;
+              break;
+            }
+          }
+          attempts++;
+        }
+        
+        // Calculate offset if box was moved
+        const offsetY = boxY - originalBoxY;
+        domainOffsets[domain] = { x: 0, y: offsetY };
+        
+        const domainBox = {
           id: `domain-box-${domain}`,
           type: 'domainBox',
-          position: { x: bounds.minX, y: bounds.minY },
+          position: { x: boxX, y: boxY },
           data: {
             label: domain,
-            width: bounds.maxX - bounds.minX,
-            height: bounds.maxY - bounds.minY
+            width: boxWidth,
+            height: boxHeight
           },
           selectable: false,
           draggable: false,
           zIndex: -1
-        });
+        };
+        
+        domainBoxNodes.push(domainBox);
+        placedDomainBoxes.push(domainBox);
+      });
+
+      // Apply domain offsets to nodes with links (nodes that are in domain boxes)
+      positionedNodes.forEach(node => {
+        const domain = node.data?.domain;
+        // Only apply offset if node is not isolated (is in a domain box)
+        const isIsolated = isolatedNodes.some(isoNode => isoNode.id === node.id);
+        if (domain && domainOffsets[domain] && !isIsolated) {
+          const offset = domainOffsets[domain];
+          node.position.x += offset.x;
+          node.position.y += offset.y;
+        }
       });
 
       setNodes([...domainBoxNodes, ...positionedNodes]);
