@@ -13,22 +13,27 @@ app.use(express.json());
 // Enable CORS for local dev and tooling. Control allowed origins with
 // ALLOW_ORIGINS env var (comma separated), otherwise allow all origins.
 // Common usage: ALLOW_ORIGINS=http://localhost:5173
-if (process.env.ALLOW_ORIGINS) {
-  const allowed = process.env.ALLOW_ORIGINS.split(",").map((s) => s.trim());
-  app.use(
-    cors({
-      origin: function (origin, cb) {
-        // allow non-browser (e.g. curl) requests with no origin
-        if (!origin) return cb(null, true);
-        if (allowed.indexOf(origin) !== -1) return cb(null, true);
-        return cb(new Error("CORS not allowed by ALLOW_ORIGINS"));
-      },
-    })
-  );
-} else {
-  // permissive in development — restrict in production if needed
-  app.use(cors());
-}
+const DEFAULT_DEV_ORIGINS = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
+
+const allowedOrigins = (process.env.ALLOW_ORIGINS
+  ? process.env.ALLOW_ORIGINS.split(',').map((s) => s.trim())
+  : DEFAULT_DEV_ORIGINS);
+
+app.use(
+  cors({
+    origin: function (origin, cb) {
+      // allow non-browser (e.g. curl) requests with no origin
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error('CORS not allowed for origin'));
+    },
+  })
+);
 
 // Static frontend (Vite build or public assets if you’re still doing that)
 app.use(express.static(path.join(__dirname, "public")));
@@ -81,8 +86,26 @@ function hasExt(exts) {
 }
 
 function isPathInsideSchemaDir(fullPath) {
-  const resolved = path.resolve(fullPath);
-  return SCHEMA_DIRS.some((root) => resolved.startsWith(root + path.sep));
+  // Resolve real path (handles symlinks) and validate it lies under one of SCHEMA_DIRS
+  let resolved;
+  try {
+    resolved = fs.realpathSync(fullPath);
+  } catch {
+    // If realpath fails (e.g., file doesn't exist yet), fall back to resolve
+    resolved = path.resolve(fullPath);
+  }
+
+  return SCHEMA_DIRS.some((root) => {
+    let rootReal;
+    try {
+      rootReal = fs.realpathSync(root);
+    } catch {
+      rootReal = path.resolve(root);
+    }
+    const rel = path.relative(rootReal, resolved);
+    // Inside if rel does not escape (no leading ..) and is not absolute
+    return rel && !rel.startsWith('..') && !path.isAbsolute(rel);
+  });
 }
 
 function handleScan(res, scanFn, errorMsg) {
