@@ -35,8 +35,36 @@ app.use(
   })
 );
 
-// Static frontend (Vite build or public assets if you’re still doing that)
-app.use(express.static(path.join(__dirname, "public")));
+// Static frontend: prefer built Vite assets in dist/, fall back to legacy public/
+const DIST_DIR = path.join(__dirname, 'dist');
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const STATIC_ROOT = fs.existsSync(DIST_DIR) ? DIST_DIR : PUBLIC_DIR;
+app.use(express.static(STATIC_ROOT));
+// Serve index.html for root and SPA fallback
+app.get('/', (req, res) => {
+  const indexPathDist = path.join(STATIC_ROOT, 'index.html');
+  // If build moved index.html elsewhere (e.g., project root during dev), attempt root fallback
+  if (fs.existsSync(indexPathDist)) {
+    return res.sendFile(indexPathDist);
+  }
+  const rootIndex = path.join(__dirname, 'index.html');
+  if (fs.existsSync(rootIndex)) {
+    return res.sendFile(rootIndex);
+  }
+  return res.status(404).send('index.html not found');
+});
+// SPA catch-all (excluding API routes already defined) - send index.html for client routing
+app.get(/^(?!\/api|\/graph|\/files|\/file|\/concept-graph|\/concepts|\/adrs).*/, (req, res, next) => {
+  const indexPathDist = path.join(STATIC_ROOT, 'index.html');
+  if (fs.existsSync(indexPathDist)) {
+    return res.sendFile(indexPathDist);
+  }
+  const rootIndex = path.join(__dirname, 'index.html');
+  if (fs.existsSync(rootIndex)) {
+    return res.sendFile(rootIndex);
+  }
+  next();
+});
 
 // Directories to scan for schemas / docs / concepts
 // e.g. SCHEMA_DIRS=examples,more_examples
