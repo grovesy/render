@@ -77,11 +77,13 @@ export default function App() {
     const params = new URLSearchParams();
     params.set('mode', leftMode);
     
-    if (leftMode === 'models' && selectedModelKey) {
-      params.set('model', selectedModelKey);
+    if (leftMode === 'models') {
       params.set('layout', layoutStyle);
       params.set('groupDomains', groupByDomains.toString());
       params.set('viewMode', viewMode);
+      if (selectedModelKey) {
+        params.set('model', selectedModelKey);
+      }
     } else if (leftMode === 'concepts' && selectedConceptPath) {
       params.set('concept', selectedConceptPath);
     } else if (leftMode === 'adrs' && selectedADRPath) {
@@ -89,6 +91,7 @@ export default function App() {
     }
     
     const newUrl = `${window.location.pathname}?${params.toString()}`;
+    console.log('[URL Sync]', { leftMode, viewMode, layoutStyle, groupByDomains, selectedModelKey, newUrl });
     window.history.replaceState({}, '', newUrl);
   }, [leftMode, selectedModelKey, selectedConceptPath, selectedADRPath, layoutStyle, groupByDomains, viewMode]);
 
@@ -329,8 +332,8 @@ export default function App() {
                   setGroupByDomains(newGroup);
                 }}
                 onViewModeChange={(newViewMode) => {
-                  setSelectedModelKey(null);
                   setViewMode(newViewMode);
+                  setSelectedModelKey(null);
                 }}
               />
             ) : leftMode === "concepts" ? (
