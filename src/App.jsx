@@ -166,12 +166,17 @@ export default function App() {
         key,
       });
 
-      setSelectedModelKey(key);
-      setLeftMode("models");
+      // Toggle selection if clicking the same model
+      if (selectedModelKey === key) {
+        setSelectedModelKey(null);
+      } else {
+        setSelectedModelKey(key);
+        setLeftMode("models");
+      }
     } catch (err) {
       console.error("[App] handleJsonFileClick error:", err);
     }
-  }, []);
+  }, [selectedModelKey]);
 
   // -------- Handle concept file click ----------
   const handleConceptFileClick = useCallback((filePath) => {
@@ -290,6 +295,7 @@ export default function App() {
             ) : (
               <LeftSidebar
                 fileIndex={fileIndex}
+                selectedModelKey={selectedModelKey}
                 onJsonFileClick={handleJsonFileClick}
                 onConceptFileClick={handleConceptFileClick}
                 viewMode={leftMode === "models" ? "models" : leftMode === "concepts" ? "concepts" : "all"}
@@ -314,9 +320,18 @@ export default function App() {
                 layoutStyle={layoutStyle}
                 groupByDomains={groupByDomains}
                 viewMode={viewMode}
-                onLayoutChange={setLayoutStyle}
-                onGroupDomainsChange={setGroupByDomains}
-                onViewModeChange={setViewMode}
+                onLayoutChange={(newLayout) => {
+                  setSelectedModelKey(null);
+                  setLayoutStyle(newLayout);
+                }}
+                onGroupDomainsChange={(newGroup) => {
+                  setSelectedModelKey(null);
+                  setGroupByDomains(newGroup);
+                }}
+                onViewModeChange={(newViewMode) => {
+                  setSelectedModelKey(null);
+                  setViewMode(newViewMode);
+                }}
               />
             ) : leftMode === "concepts" ? (
               <ConceptGraphView conceptPath={selectedConceptPath} />

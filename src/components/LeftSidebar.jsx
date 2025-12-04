@@ -12,6 +12,29 @@ import ApiClient from "../lib/ApiClient";
 
 const api = ApiClient;
 
+// Helper to extract model key from file
+async function getModelKeyFromFile(filePath) {
+  try {
+    const content = await api.fetchFileContent(filePath);
+    const schema = JSON.parse(content);
+    const idStr = schema.$id || schema.id;
+    
+    if (idStr && idStr.startsWith("data://")) {
+      const without = idStr.slice("data://".length);
+      const [domain, rest] = without.split("/model/");
+      if (domain && rest) {
+        const [, modelName] = rest.split("/");
+        if (modelName) {
+          return `${domain}:${modelName}`;
+        }
+      }
+    }
+  } catch (err) {
+    // Ignore errors
+  }
+  return null;
+}
+
 async function groupByDomain(files) {
   const groups = {};
   
@@ -71,7 +94,7 @@ function buildDomainTree(jsonGroups) {
   return tree;
 }
 
-function DomainTreeNode({ name, node, level, onJsonFileClick, expanded, onToggle }) {
+function DomainTreeNode({ name, node, level, selectedModelKey, onJsonFileClick, expanded, onToggle }) {
   const hasChildren = Object.keys(node.children).length > 0;
   const hasFiles = node.files && node.files.length > 0;
   const isExpanded = expanded[node.fullPath] !== false; // default true
@@ -101,28 +124,50 @@ function DomainTreeNode({ name, node, level, onJsonFileClick, expanded, onToggle
             </Typography>
           </ListItemButton>
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+            {hasFiles && node.files.map((f) => {
+              // Generate model key for comparison
+              const fileKey = `${node.fullPath}:${f.name.replace('.json', '')}`;
+              const isSelected = selectedModelKey && fileKey === selectedModelKey;
+              
+              return (
+                <ListItemButton
+                  key={f.path}
+                  dense
+                  selected={isSelected}
+                  sx={{ 
+                    pl: 3 + (level + 1) * 1.5, 
+                    py: 0.3,
+                    backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                    '&:hover': {
+                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.25)' : 'rgba(0, 0, 0, 0.04)'
+                    }
+                  }}
+                  onClick={() => onJsonFileClick(f.path)}
+                >
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontSize: 13,
+                      fontWeight: isSelected ? 600 : 400,
+                      color: isSelected ? '#1e40af' : 'text.primary'
+                    }}
+                  >
+                    {f.name}
+                  </Typography>
+                </ListItemButton>
+              );
+            })}
             {hasChildren && Object.entries(node.children).map(([childName, childNode]) => (
               <DomainTreeNode
                 key={childName}
                 name={childName}
                 node={childNode}
                 level={level + 1}
+                selectedModelKey={selectedModelKey}
                 onJsonFileClick={onJsonFileClick}
                 expanded={expanded}
                 onToggle={onToggle}
               />
-            ))}
-            {hasFiles && node.files.map((f) => (
-              <ListItemButton
-                key={f.path}
-                dense
-                sx={{ pl: 3 + (level + 1) * 1.5, py: 0.3 }}
-                onClick={() => onJsonFileClick(f.path)}
-              >
-                <Typography variant="body2" sx={{ fontSize: 13 }}>
-                  {f.name}
-                </Typography>
-              </ListItemButton>
             ))}
           </Collapse>
         </>
@@ -144,6 +189,7 @@ function groupByDir(files) {
 
 export default function LeftSidebar({
   fileIndex,
+  selectedModelKey,
   onJsonFileClick,
   onConceptFileClick,
   viewMode = "all", // 'models' | 'concepts' | 'all'
@@ -206,6 +252,7 @@ export default function LeftSidebar({
             name={rootName}
             node={rootNode}
             level={0}
+            selectedModelKey={selectedModelKey}
             onJsonFileClick={onJsonFileClick}
             expanded={expanded}
             onToggle={handleToggle}

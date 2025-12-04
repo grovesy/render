@@ -103,9 +103,7 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
 
   // Sync selectedKey from parent
   useEffect(() => {
-    if (selectedKey) {
-      setSelectedId(selectedKey);
-    }
+    setSelectedId(selectedKey);
   }, [selectedKey]);
 
   // Auto-focus on selected model
@@ -119,7 +117,7 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
         reactFlowInstance.current.fitView({
           nodes: [{ id: selectedId }],
           duration: 400,
-          padding: 0.3,
+          padding: 1.5,
         });
       }
     } else if (viewMode === 'table' && tableRowRefs.current[selectedId]) {
