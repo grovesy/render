@@ -66,7 +66,7 @@ export default function ADRSidebar({ adrs, selectedPath, onADRClick }) {
                 sx={{ pl: 3 }}
                 onClick={() => onADRClick(f.path)}
               >
-                <Typography variant="body2" sx={{ fontSize: 13 }}>
+                <Typography variant="body2" sx={{ fontSize: 13, whiteSpace: "nowrap" }}>
                   {f.name}
                 </Typography>
               </ListItemButton>

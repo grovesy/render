@@ -214,7 +214,9 @@ export default function App() {
 
             <Box
               sx={{
-                width: 260,
+                width: leftMode === "adrs" ? "auto" : 260,
+                minWidth: 260,
+                maxWidth: leftMode === "adrs" ? 600 : 260,
                 bgcolor: "background.paper",
                 display: "flex",
                 flexDirection: "column",

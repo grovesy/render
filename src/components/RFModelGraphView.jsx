@@ -145,6 +145,9 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
         };
       });
 
+      // Build a set of valid node IDs for edge validation
+      const validNodeIds = new Set(tempNodes.map(n => n.id));
+
       const tempEdges = [];
       (fetchedGraphData.entities || []).forEach((e) => {
         (e.refs || []).forEach((r) => {
@@ -155,6 +158,13 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
           const edgeId = `${e.domain}:${e.model}-${r.field}`;
           const sourceId = `${e.domain}:${e.model}`;
           const targetId = `${refDomain}:${refModel}`;
+          
+          // Skip edges where target node doesn't exist
+          if (!validNodeIds.has(targetId)) {
+            console.warn(`Skipping edge ${edgeId}: target node "${targetId}" not found`);
+            return;
+          }
+          
           console.log('Creating edge:', { edgeId, sourceId, targetId, field: r.field });
           tempEdges.push({ 
             id: edgeId, 
@@ -532,21 +542,21 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
                     onClick={() => setDetailsWidth(Math.max(300, detailsWidth - 100))}
                     title="Decrease width"
                   >
-                    â—€
+                    ◀
                   </IconButton>
                   <IconButton
                     size="small"
                     onClick={() => setDetailsWidth(Math.min(800, detailsWidth + 100))}
                     title="Increase width"
                   >
-                    â–¶
+                    ▶
                   </IconButton>
                   <IconButton
                     size="small"
                     onClick={() => setDetailsExpanded(false)}
                     title="Close panel"
                   >
-                    âœ•
+                    ✕
                   </IconButton>
                 </Box>
               </Box>
