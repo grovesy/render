@@ -41,7 +41,18 @@ app.use(
 const DIST_DIR = path.join(__dirname, 'dist');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const STATIC_ROOT = fs.existsSync(DIST_DIR) ? DIST_DIR : PUBLIC_DIR;
-app.use(express.static(STATIC_ROOT));
+app.use(express.static(STATIC_ROOT, {
+  setHeaders: (res, filePath) => {
+    // Set correct MIME types for common assets
+    if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    } else if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (filePath.endsWith('.json')) {
+      res.setHeader('Content-Type', 'application/json');
+    }
+  }
+}));
 // Serve index.html for root and SPA fallback
 app.get('/', (req, res) => {
   const indexPathDist = path.join(STATIC_ROOT, 'index.html');
@@ -55,8 +66,8 @@ app.get('/', (req, res) => {
   }
   return res.status(404).send('index.html not found');
 });
-// SPA catch-all (excluding API routes already defined) - send index.html for client routing
-app.get(/^(?!\/api|\/graph|\/files|\/file|\/concept-graph|\/concepts|\/adrs).*/, (req, res, next) => {
+// SPA catch-all (excluding API routes and assets) - send index.html for client routing
+app.get(/^(?!\/api|\/graph|\/files|\/file|\/concept-graph|\/concepts|\/adrs|\/assets).*/, (req, res, next) => {
   const indexPathDist = path.join(STATIC_ROOT, 'index.html');
   if (fs.existsSync(indexPathDist)) {
     return res.sendFile(indexPathDist);
