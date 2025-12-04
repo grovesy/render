@@ -1,5 +1,5 @@
 // src/components/LeftSidebar.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   List,
@@ -8,16 +8,34 @@ import {
   Typography,
   Collapse,
 } from "@mui/material";
+import ApiClient from "../lib/ApiClient";
 
-function groupByDir(files) {
+const api = ApiClient;
+
+async function groupByDomain(files) {
   const groups = {};
-  files.forEach((f) => {
-    // crude grouping: parent directory name
-    const parts = f.path.split(/[/\\]+/);
-    const dir = parts.length > 1 ? parts[parts.length - 2] : "(root)";
-    if (!groups[dir]) groups[dir] = [];
-    groups[dir].push(f);
-  });
+  
+  for (const f of files) {
+    try {
+      const content = await api.fetchFileContent(f.path);
+      const schema = JSON.parse(content);
+      const idStr = schema.$id || schema.id;
+      
+      if (idStr && idStr.startsWith("data://")) {
+        // Extract domain from data://<domain>/model/...
+        const without = idStr.slice("data://".length);
+        const [domain] = without.split("/model/");
+        
+        if (domain) {
+          if (!groups[domain]) groups[domain] = [];
+          groups[domain].push(f);
+        }
+      }
+    } catch (err) {
+      console.warn(`Failed to parse ${f.path}:`, err);
+    }
+  }
+  
   return groups;
 }
 
@@ -113,6 +131,17 @@ function DomainTreeNode({ name, node, level, onJsonFileClick, expanded, onToggle
   );
 }
 
+function groupByDir(files) {
+  const groups = {};
+  files.forEach((f) => {
+    const parts = f.path.split(/[/\\]+/);
+    const dir = parts.length > 1 ? parts[parts.length - 2] : "(root)";
+    if (!groups[dir]) groups[dir] = [];
+    groups[dir].push(f);
+  });
+  return groups;
+}
+
 export default function LeftSidebar({
   fileIndex,
   onJsonFileClick,
@@ -121,11 +150,22 @@ export default function LeftSidebar({
 }) {
   const { jsonModels = [], concepts = [] } = fileIndex;
   const [expanded, setExpanded] = useState({});
+  const [jsonGroups, setJsonGroups] = useState({});
+  const [domainTree, setDomainTree] = useState({});
 
-  const jsonGroups = groupByDir(jsonModels);
+  // Load and group JSON models by domain from $id
+  useEffect(() => {
+    async function loadGroups() {
+      const groups = await groupByDomain(jsonModels);
+      setJsonGroups(groups);
+      setDomainTree(buildDomainTree(groups));
+    }
+    if (jsonModels.length > 0) {
+      loadGroups();
+    }
+  }, [jsonModels]);
+
   const conceptGroups = groupByDir(concepts);
-  
-  const domainTree = buildDomainTree(jsonGroups);
 
   const handleToggle = (path) => {
     setExpanded(prev => ({
