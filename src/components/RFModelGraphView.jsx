@@ -96,6 +96,8 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
   const [detailsWidth, setDetailsWidth] = useState(400);
   const [rawJson, setRawJson] = useState(null);
   const [isResizing, setIsResizing] = useState(false);
+  const [collapsedNodes, setCollapsedNodes] = useState({}); // Track which nodes are collapsed
+  const [allCollapsed, setAllCollapsed] = useState(true); // Global collapse state - start collapsed
 
   // Sync selectedKey from parent
   useEffect(() => {
@@ -123,21 +125,41 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
       const fetchedGraphData = await api.fetchGraph();
       setGraphData(fetchedGraphData);
 
-      // Build nodes with measured size (match UMLNode calc)
+      // Initialize collapsed state for all nodes on first load
+      if (Object.keys(collapsedNodes).length === 0) {
+        const initialCollapsed = {};
+        (fetchedGraphData.entities || []).forEach((e) => {
+          initialCollapsed[`${e.domain}:${e.model}`] = true; // Start collapsed
+        });
+        setCollapsedNodes(initialCollapsed);
+      }
+
+      // Build nodes with measured size based on collapse state
       const tempNodes = (fetchedGraphData.entities || []).map((e) => {
         const rowH = 24; const headerH = 44; const padding = 12;
+        const nodeId = `${e.domain}:${e.model}`;
+        const isCollapsed = collapsedNodes[nodeId] !== undefined ? collapsedNodes[nodeId] : true;
         const maxField = Math.max(...(e.attrs || []).map(a => (a.field || "").length), 0);
         const charW = 8; const sepX = padding + maxField * charW + 12;
         const width = Math.max(240, sepX + 120 + padding);
-        const height = headerH + padding + (e.attrs || []).length * rowH + padding;
+        const expandedHeight = headerH + padding + (e.attrs || []).length * rowH + padding;
+        const height = isCollapsed ? headerH : expandedHeight;
+        
         return {
-          id: `${e.domain}:${e.model}`,
+          id: nodeId,
           type: "uml",
           data: { 
             title: e.title, 
             attrs: e.attrs,
             domain: e.domain,
-            model: e.model
+            model: e.model,
+            collapsed: isCollapsed,
+            onToggleCollapse: () => {
+              setCollapsedNodes(prev => ({
+                ...prev,
+                [nodeId]: !prev[nodeId]
+              }));
+            }
           },
           position: { x: 0, y: 0 },
           width,
@@ -365,7 +387,19 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
       setEdges(finalEdges);
     }
     load();
-  }, [elk, layoutStyle, groupByDomains]);
+  }, [elk, layoutStyle, groupByDomains, collapsedNodes]);
+
+  // Global collapse/expand toggle
+  const handleGlobalToggle = () => {
+    if (!graphData) return;
+    const newState = !allCollapsed;
+    const newCollapsed = {};
+    (graphData.entities || []).forEach((e) => {
+      newCollapsed[`${e.domain}:${e.model}`] = newState;
+    });
+    setCollapsedNodes(newCollapsed);
+    setAllCollapsed(newState);
+  };
 
   // Find selected entity details
   const selectedEntity = selectedId && graphData 
@@ -469,6 +503,24 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
           >
             Group by domains
           </label>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <button
+            onClick={handleGlobalToggle}
+            style={{
+              padding: '4px 12px',
+              fontSize: '13px',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              fontWeight: 500
+            }}
+            title={allCollapsed ? "Expand all nodes" : "Collapse all nodes"}
+          >
+            {allCollapsed ? '▼ Expand All' : '▲ Collapse All'}
+          </button>
         </Box>
       </Box>
       
