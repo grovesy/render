@@ -38,7 +38,14 @@ const theme = createTheme({
 });
 
 export default function App() {
-  const [leftMode, setLeftMode] = useState("models"); // 'models' | 'concepts' | 'adrs'
+  // Read initial state from URL params
+  const params = new URLSearchParams(window.location.search);
+  const initialMode = params.get('mode') || 'concepts';
+  const initialModel = params.get('model');
+  const initialConcept = params.get('concept');
+  const initialAdr = params.get('adr');
+
+  const [leftMode, setLeftMode] = useState(initialMode); // 'models' | 'concepts' | 'adrs'
   // main view is controlled by the left-mode switcher now
   const [fileIndex, setFileIndex] = useState({
     jsonModels: [],
@@ -48,11 +55,28 @@ export default function App() {
 
   const [adrs, setAdrs] = useState([]);
 
-  const [selectedModelKey, setSelectedModelKey] = useState(null); // `${domain}:${model}`
-  const [selectedConceptPath, setSelectedConceptPath] = useState(null);
-  const [selectedADRPath, setSelectedADRPath] = useState(null);
+  const [selectedModelKey, setSelectedModelKey] = useState(initialModel); // `${domain}:${model}`
+  const [selectedConceptPath, setSelectedConceptPath] = useState(initialConcept);
+  const [selectedADRPath, setSelectedADRPath] = useState(initialAdr);
 
   const [filesError, setFilesError] = useState("");
+
+  // Sync URL with state changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('mode', leftMode);
+    
+    if (leftMode === 'models' && selectedModelKey) {
+      params.set('model', selectedModelKey);
+    } else if (leftMode === 'concepts' && selectedConceptPath) {
+      params.set('concept', selectedConceptPath);
+    } else if (leftMode === 'adrs' && selectedADRPath) {
+      params.set('adr', selectedADRPath);
+    }
+    
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  }, [leftMode, selectedModelKey, selectedConceptPath, selectedADRPath]);
 
   // -------- Fetch /files once ----------
   useEffect(() => {
@@ -61,13 +85,18 @@ export default function App() {
         const data = await api.fetchFilesIndex();
         setFileIndex(data);
         setFilesError("");
+        
+        // Auto-select first concept if on concepts mode and none selected
+        if (leftMode === 'concepts' && !selectedConceptPath && data.concepts && data.concepts.length > 0) {
+          setSelectedConceptPath(data.concepts[0].path);
+        }
       } catch (err) {
         console.error("[App] Failed to load /files:", err);
         setFilesError(err.message || "Failed to load files index");
       }
     }
     loadFiles();
-  }, []);
+  }, [leftMode, selectedConceptPath]);
 
   // -------- Fetch /adrs once ----------
   useEffect(() => {

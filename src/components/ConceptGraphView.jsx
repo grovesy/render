@@ -42,15 +42,14 @@ export default function ConceptGraphView({ conceptPath }) {
       try {
         const data = await api.fetchConceptGraph(conceptPath);
 
-        // Build nodes with UML style
+        // Build nodes with UML style - concept nodes show title only (no attrs)
         const tempNodes = (data.nodes || []).map((n) => {
-          const attrs = n.attrs || [{ field: n.label || n.id, type: '' }];
           return {
             id: n.id,
             type: 'uml',
             data: { 
               title: n.label || n.id,
-              attrs: attrs
+              attrs: [] // Empty attrs for concept nodes - title only
             },
             position: { x: 0, y: 0 }
           };
@@ -59,14 +58,11 @@ export default function ConceptGraphView({ conceptPath }) {
         // Calculate node sizes for layout
         const nodeSizes = {};
         tempNodes.forEach(n => {
-          const rowH = 24;
           const headerH = 44;
           const padding = 12;
-          const maxField = Math.max(...n.data.attrs.map(a => (a.field || "").length), 0);
-          const charW = 8;
-          const sepX = padding + maxField * charW + 12;
-          const width = Math.max(240, sepX + 120 + padding);
-          const height = headerH + padding + n.data.attrs.length * rowH + padding;
+          // Title-only nodes: just header + padding
+          const width = Math.max(200, (n.data.title || "").length * 8 + padding * 2);
+          const height = headerH + padding;
           nodeSizes[n.id] = { width, height };
         });
 
