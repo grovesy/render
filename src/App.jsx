@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   ThemeProvider,
   createTheme,
@@ -68,6 +68,9 @@ export default function App() {
   const [viewMode, setViewMode] = useState(initialViewMode); // 'graph' | 'table'
 
   const [filesError, setFilesError] = useState("");
+  
+  // WebSocket for live reload
+  const wsRef = useRef(null);
 
   // Sync URL with state changes
   useEffect(() => {
@@ -90,24 +93,25 @@ export default function App() {
   }, [leftMode, selectedModelKey, selectedConceptPath, selectedADRPath, layoutStyle, groupByDomains, viewMode]);
 
   // -------- Fetch /files once ----------
-  useEffect(() => {
-    async function loadFiles() {
-      try {
-        const data = await api.fetchFilesIndex();
-        setFileIndex(data);
-        setFilesError("");
-        
-        // Auto-select first concept if on concepts mode and none selected
-        if (leftMode === 'concepts' && !selectedConceptPath && data.concepts && data.concepts.length > 0) {
-          setSelectedConceptPath(data.concepts[0].path);
-        }
-      } catch (err) {
-        console.error("[App] Failed to load /files:", err);
-        setFilesError(err.message || "Failed to load files index");
+  const loadFiles = useCallback(async () => {
+    try {
+      const data = await api.fetchFilesIndex();
+      setFileIndex(data);
+      setFilesError("");
+      
+      // Auto-select first concept if on concepts mode and none selected
+      if (leftMode === 'concepts' && !selectedConceptPath && data.concepts && data.concepts.length > 0) {
+        setSelectedConceptPath(data.concepts[0].path);
       }
+    } catch (err) {
+      console.error("[App] Failed to load /files:", err);
+      setFilesError(err.message || "Failed to load files index");
     }
-    loadFiles();
   }, [leftMode, selectedConceptPath]);
+  
+  useEffect(() => {
+    loadFiles();
+  }, [loadFiles]);
 
   // -------- Fetch /adrs once ----------
   useEffect(() => {
@@ -183,6 +187,43 @@ export default function App() {
   }, []);
 
   // tabs removed — left-mode controls the main view
+  
+  // -------- WebSocket connection for live reload ----------
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = API_BASE ? `${protocol}//${new URL(API_BASE).host}` : `${protocol}//${window.location.host}`;
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+    
+    ws.onopen = () => {
+      console.log('[WebSocket] Connected for live reload');
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'reload') {
+          console.log('[WebSocket] File change detected, reloading data...');
+          loadFiles();
+        }
+      } catch (err) {
+        console.error('[WebSocket] Error parsing message:', err);
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error('[WebSocket] Error:', error);
+    };
+    
+    ws.onclose = () => {
+      console.log('[WebSocket] Disconnected');
+    };
+    
+    return () => {
+      ws.close();
+    };
+  }, [loadFiles, API_BASE]);
 
   return (
     <ThemeProvider theme={theme}>

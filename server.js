@@ -3,6 +3,8 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
+const { WebSocketServer } = require("ws");
+const chokidar = require("chokidar");
 const { buildGraphFromSchemas } = require("./schemaGraph");
 const { buildConceptGraphFromFile } = require("./conceptGraph");
 
@@ -233,6 +235,56 @@ app.get("/concept-graph", (req, res) => {
 // ---------- Start server ----------
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Schema graph server listening on http://localhost:${PORT}`);
 });
+
+// ---------- WebSocket server for live reload ----------
+
+const wss = new WebSocketServer({ server });
+
+wss.on('connection', (ws) => {
+  console.log('WebSocket client connected');
+  ws.on('close', () => {
+    console.log('WebSocket client disconnected');
+  });
+});
+
+function broadcastReload() {
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) { // WebSocket.OPEN
+      client.send(JSON.stringify({ type: 'reload' }));
+    }
+  });
+}
+
+// ---------- File watcher for live reload ----------
+
+const watcher = chokidar.watch(SCHEMA_DIRS, {
+  ignored: /(^|[\/\\])\../, // ignore dotfiles
+  persistent: true,
+  ignoreInitial: true,
+  awaitWriteFinish: {
+    stabilityThreshold: 300,
+    pollInterval: 100
+  }
+});
+
+watcher
+  .on('add', (path) => {
+    console.log(`File added: ${path}`);
+    broadcastReload();
+  })
+  .on('change', (path) => {
+    console.log(`File changed: ${path}`);
+    broadcastReload();
+  })
+  .on('unlink', (path) => {
+    console.log(`File removed: ${path}`);
+    broadcastReload();
+  })
+  .on('error', (error) => {
+    console.error('Watcher error:', error);
+  });
+
+console.log(`Watching for file changes in: ${SCHEMA_DIRS.join(', ')}`);
