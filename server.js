@@ -13,24 +13,19 @@ const app = express();
 app.use(express.json());
 
 // Enable CORS for local dev and tooling. Control allowed origins with
-// ALLOW_ORIGINS env var (comma separated), otherwise allow all origins.
-// Common usage: ALLOW_ORIGINS=http://localhost:5173
-const DEFAULT_DEV_ORIGINS = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-];
-
-const allowedOrigins = (process.env.ALLOW_ORIGINS
+// ALLOW_ORIGINS env var (comma separated).
+// Common usage: ALLOW_ORIGINS=http://localhost:5173,http://localhost:3000
+const allowedOrigins = process.env.ALLOW_ORIGINS
   ? process.env.ALLOW_ORIGINS.split(',').map((s) => s.trim())
-  : DEFAULT_DEV_ORIGINS);
+  : [];
 
 app.use(
   cors({
     origin: function (origin, cb) {
       // allow non-browser (e.g. curl) requests with no origin
       if (!origin) return cb(null, true);
+      // If no origins configured, allow all
+      if (allowedOrigins.length === 0) return cb(null, true);
       if (allowedOrigins.includes(origin)) return cb(null, true);
       return cb(new Error('CORS not allowed for origin'));
     },
