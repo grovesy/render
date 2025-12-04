@@ -44,6 +44,8 @@ export default function App() {
   const initialModel = params.get('model');
   const initialConcept = params.get('concept');
   const initialAdr = params.get('adr');
+  const initialLayout = params.get('layout') || 'hierarchical';
+  const initialGroupDomains = params.get('groupDomains') !== 'false'; // default true
 
   const [leftMode, setLeftMode] = useState(initialMode); // 'models' | 'concepts' | 'adrs'
   // main view is controlled by the left-mode switcher now
@@ -58,6 +60,10 @@ export default function App() {
   const [selectedModelKey, setSelectedModelKey] = useState(initialModel); // `${domain}:${model}`
   const [selectedConceptPath, setSelectedConceptPath] = useState(initialConcept);
   const [selectedADRPath, setSelectedADRPath] = useState(initialAdr);
+  
+  // Model graph options
+  const [layoutStyle, setLayoutStyle] = useState(initialLayout); // 'star' | 'force' | 'hierarchical'
+  const [groupByDomains, setGroupByDomains] = useState(initialGroupDomains);
 
   const [filesError, setFilesError] = useState("");
 
@@ -68,6 +74,8 @@ export default function App() {
     
     if (leftMode === 'models' && selectedModelKey) {
       params.set('model', selectedModelKey);
+      params.set('layout', layoutStyle);
+      params.set('groupDomains', groupByDomains.toString());
     } else if (leftMode === 'concepts' && selectedConceptPath) {
       params.set('concept', selectedConceptPath);
     } else if (leftMode === 'adrs' && selectedADRPath) {
@@ -76,7 +84,7 @@ export default function App() {
     
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', newUrl);
-  }, [leftMode, selectedModelKey, selectedConceptPath, selectedADRPath]);
+  }, [leftMode, selectedModelKey, selectedConceptPath, selectedADRPath, layoutStyle, groupByDomains]);
 
   // -------- Fetch /files once ----------
   useEffect(() => {
@@ -255,7 +263,13 @@ export default function App() {
             }}
           >
             {leftMode === "models" ? (
-              <RFModelGraphView selectedKey={selectedModelKey} />
+              <RFModelGraphView 
+                selectedKey={selectedModelKey}
+                layoutStyle={layoutStyle}
+                groupByDomains={groupByDomains}
+                onLayoutChange={setLayoutStyle}
+                onGroupDomainsChange={setGroupByDomains}
+              />
             ) : leftMode === "concepts" ? (
               <ConceptGraphView conceptPath={selectedConceptPath} />
             ) : (

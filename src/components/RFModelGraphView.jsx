@@ -86,7 +86,7 @@ function JsonHighlighter({ code }) {
   );
 }
 
-export default function RFModelGraphView({ selectedKey }) {
+export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDomains, onLayoutChange, onGroupDomainsChange }) {
   const [elk, setElk] = useState(null);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
@@ -167,214 +167,84 @@ export default function RFModelGraphView({ selectedKey }) {
 
       console.log('Total edges created:', tempEdges.length);
 
-      // Star schema layout with link tables in center
-      const incomingEdgeCount = {};
-      const outgoingEdgeCount = {};
-      tempNodes.forEach(n => { 
-        incomingEdgeCount[n.id] = 0; 
-        outgoingEdgeCount[n.id] = 0;
-      });
-      tempEdges.forEach(e => { 
-        incomingEdgeCount[e.target] = (incomingEdgeCount[e.target] || 0) + 1; 
-        outgoingEdgeCount[e.source] = (outgoingEdgeCount[e.source] || 0) + 1;
-      });
-
-      // Find which domains each node references
-      const nodeDomainRefs = {};
-      tempNodes.forEach(n => {
-        const refsSet = new Set();
-        tempEdges.filter(e => e.source === n.id).forEach(e => {
-          const targetNode = tempNodes.find(tn => tn.id === e.target);
-          if (targetNode) refsSet.add(targetNode.data.domain);
-        });
-        nodeDomainRefs[n.id] = refsSet;
-      });
-
-      // Classify nodes
-      const isolatedNodes = tempNodes.filter(n => 
-        incomingEdgeCount[n.id] === 0 && outgoingEdgeCount[n.id] === 0
-      );
-      
-      // Link tables: reference multiple domains AND have outgoing edges
-      const linkTables = tempNodes.filter(n => 
-        nodeDomainRefs[n.id] && nodeDomainRefs[n.id].size > 1
-      );
-      
-      // Main fact tables: high incoming edges, not link tables
-      const factTables = tempNodes.filter(n => 
-        incomingEdgeCount[n.id] > 0 && 
-        !linkTables.includes(n) && 
-        !isolatedNodes.includes(n)
-      ).sort((a, b) => incomingEdgeCount[b.id] - incomingEdgeCount[a.id]);
-      
-      // Dimension tables: have outgoing edges but reference single domain
-      const dimensionTables = tempNodes.filter(n => 
-        outgoingEdgeCount[n.id] > 0 &&
-        !linkTables.includes(n) &&
-        !factTables.includes(n) &&
-        !isolatedNodes.includes(n)
-      );
-
-      const positionedNodes = [];
-      
-      // Position isolated nodes - we'll do this after connected nodes to place them at bottom
-      const isolatedPositions = [];
-      
-      // Track domain boundaries for boxes
-      const domainBounds = {};
-
-      const canvasCenterX = 900;
-      const canvasCenterY = 600;
-      
-      // Position link tables in the center - stack vertically if multiple with collision detection
-      const linkSpacing = 300;
-      const linkVerticalSpacing = 280;
-      linkTables.forEach((n, idx) => {
-        const row = Math.floor(idx / 2); // 2 per row
-        const col = idx % 2;
-        const offsetX = (col - 0.5) * linkSpacing;
-        const offsetY = (row - (Math.ceil(linkTables.length / 2) - 1) / 2) * linkVerticalSpacing;
-        
-        const proposedPosition = { 
-          x: canvasCenterX + offsetX, 
-          y: canvasCenterY + offsetY 
+      // Configure ELK layout based on selected style
+      let layoutOptions = {};
+      if (layoutStyle === 'hierarchical') {
+        layoutOptions = {
+          "elk.algorithm": "layered",
+          "elk.direction": "RIGHT",
+          "elk.layered.spacing.nodeNodeBetweenLayers": "120",
+          "elk.spacing.nodeNode": "80",
+          "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
         };
-        
-        // Check for collisions with already positioned nodes
-        const adjustedPosition = adjustPositionForCollision(
-          { ...n, position: proposedPosition },
-          positionedNodes,
-          50
-        );
-        
-        positionedNodes.push({
-          ...n,
-          position: adjustedPosition
-        });
+      } else if (layoutStyle === 'force') {
+        layoutOptions = {
+          "elk.algorithm": "force",
+          "elk.force.repulsion": "1000",
+          "elk.spacing.nodeNode": "100",
+        };
+      } else if (layoutStyle === 'star') {
+        // Star schema will use custom positioning (see below)
+        layoutOptions = {
+          "elk.algorithm": "layered",
+          "elk.direction": "DOWN",
+          "elk.layered.spacing.nodeNodeBetweenLayers": "150",
+          "elk.spacing.nodeNode": "100",
+        };
+      }
+
+      const elkGraph = {
+        id: "root",
+        layoutOptions,
+        children: tempNodes.map(n => ({ 
+          id: n.id, 
+          width: n.width, 
+          height: n.height 
+        })),
+        edges: tempEdges.map(e => ({ 
+          id: e.id, 
+          sources: [e.source], 
+          targets: [e.target] 
+        })),
+      };
+
+      const layout = await elk.layout(elkGraph);
+      const posMap = {};
+      (layout.children || []).forEach((c) => { 
+        posMap[c.id] = { x: c.x || 0, y: c.y || 0 }; 
       });
 
-      // Group ALL tables by domain (not just fact tables) - exclude isolated nodes
-      const nodesByDomain = {};
-      tempNodes.forEach(n => {
-        // Skip isolated nodes - they won't get domain boxes
-        if (isolatedNodes.includes(n)) return;
-        
-        const domain = n.data.domain;
-        if (!nodesByDomain[domain]) nodesByDomain[domain] = [];
-        nodesByDomain[domain].push(n);
-      });
+      // Apply ELK layout positions to all nodes
+      const positionedNodes = tempNodes.map(n => ({
+        ...n,
+        position: posMap[n.id] || { x: 0, y: 0 }
+      }));
 
-      // Group fact tables by domain for positioning
-      const factsByDomain = {};
-      factTables.forEach(n => {
-        if (!factsByDomain[n.data.domain]) factsByDomain[n.data.domain] = [];
-        factsByDomain[n.data.domain].push(n);
-      });
-
-      const domains = Object.keys(factsByDomain);
-      const domainRadius = 600;
-
-      // Calculate vertical space needed for link tables
-      const linkTableRows = Math.ceil(linkTables.length / 2);
-      const linkTableHeight = linkTableRows * 250;
-      const domainVerticalOffset = Math.max(300, linkTableHeight / 2 + 150); // Ensure clearance from link tables
-
-      domains.forEach((domain, domainIdx) => {
-        const factsInDomain = factsByDomain[domain];
-        
-        // Position domain cluster left or right of center
-        const isLeft = domainIdx % 2 === 0;
-        const domainCenterX = isLeft ? canvasCenterX - domainRadius : canvasCenterX + domainRadius;
-        // Spread domains vertically with enough space to avoid link tables
-        const domainCenterY = canvasCenterY + (domainIdx - (domains.length - 1) / 2) * domainVerticalOffset;
-
-        // Track bounds for this domain (no longer used for domain boxes, but kept for reference)
-        let minX = domainCenterX, maxX = domainCenterX, minY = domainCenterY, maxY = domainCenterY;
-
-        // Main fact table(s) at domain center with collision detection
-        const mainFact = factsInDomain[0];
-        const mainFactProposed = { x: domainCenterX, y: domainCenterY };
-        const mainFactAdjusted = adjustPositionForCollision(
-          { ...mainFact, position: mainFactProposed },
-          positionedNodes,
-          60
-        );
-        
-        positionedNodes.push({
-          ...mainFact,
-          position: mainFactAdjusted
-        });
-        minX = Math.min(minX, mainFactAdjusted.x);
-        maxX = Math.max(maxX, mainFactAdjusted.x + (mainFact.width || 250));
-        minY = Math.min(minY, mainFactAdjusted.y);
-        maxY = Math.max(maxY, mainFactAdjusted.y + (mainFact.height || 200));
-
-        // Dimension tables for this domain orbit around it (semi-circle on outer side)
-        const dimsForDomain = dimensionTables.filter(d => d.data.domain === domain);
-        const clusterRadius = 420;
-        
-        dimsForDomain.forEach((n, idx) => {
-          // Arrange vertically on the outer side
-          const totalHeight = (dimsForDomain.length - 1) * 280;
-          const startY = mainFactAdjusted.y - totalHeight / 2;
-          const y = startY + idx * 280;
-          const x = isLeft ? domainCenterX - clusterRadius : domainCenterX + clusterRadius;
-          
-          const proposedPosition = { x, y };
-          const adjustedPosition = adjustPositionForCollision(
-            { ...n, position: proposedPosition },
-            positionedNodes,
-            50
-          );
-          
-          positionedNodes.push({
-            ...n,
-            position: adjustedPosition
-          });
-          minX = Math.min(minX, adjustedPosition.x);
-          maxX = Math.max(maxX, adjustedPosition.x + (n.width || 250));
-          minY = Math.min(minY, adjustedPosition.y);
-          maxY = Math.max(maxY, adjustedPosition.y + (n.height || 200));
-        });
-      });
-
-      // Calculate the maximum Y position from all connected nodes
-      let maxY = 0;
-      positionedNodes.forEach(n => {
-        const nodeBottomY = n.position.y + (n.height || 200);
-        if (nodeBottomY > maxY) maxY = nodeBottomY;
-      });
-
-      // Position isolated nodes at the bottom with clearance
-      const bottomStartY = maxY + 300; // 300px clearance from bottom-most connected node
-      isolatedNodes.forEach((n, idx) => {
-        const row = Math.floor(idx / 4); // 4 columns
-        const col = idx % 4;
-        positionedNodes.push({
-          ...n,
-          position: { x: 200 + col * 320, y: bottomStartY + row * 250 }
-        });
-      });
-
-      // Add domain box background nodes - calculate bounds from ALL nodes in each domain
+      // Conditionally add domain boxes if grouping is enabled
       const domainBoxNodes = [];
-      const placedDomainBoxes = []; // Track placed boxes for collision detection
-      const domainOffsets = {}; // Track how much each domain box was moved
       
+      if (groupByDomains) {
+        // Group nodes by domain for domain boxes
+        const nodesByDomain = {};
+        positionedNodes.forEach(n => {
+          const domain = n.data.domain;
+          if (!nodesByDomain[domain]) nodesByDomain[domain] = [];
+          nodesByDomain[domain].push(n);
+        });
+
+        // Add domain box background nodes - calculate bounds from ALL nodes in each domain
+        const placedDomainBoxes = []; // Track placed boxes for collision detection
+        const domainOffsets = {}; // Track how much each domain box was moved
+        
       Object.keys(nodesByDomain).forEach(domain => {
         const nodesInDomain = nodesByDomain[domain];
         
-        // Find all positioned nodes for this domain
-        const domainPositionedNodes = positionedNodes.filter(pn => 
-          nodesInDomain.some(n => n.id === pn.id)
-        );
-        
-        if (domainPositionedNodes.length === 0) return;
+        if (nodesInDomain.length === 0) return;
         
         // Calculate bounds from all positioned nodes in this domain
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         
-        domainPositionedNodes.forEach(n => {
+        nodesInDomain.forEach(n => {
           minX = Math.min(minX, n.position.x);
           maxX = Math.max(maxX, n.position.x + (n.width || 250));
           minY = Math.min(minY, n.position.y);
@@ -436,17 +306,16 @@ export default function RFModelGraphView({ selectedKey }) {
         placedDomainBoxes.push(domainBox);
       });
 
-      // Apply domain offsets to nodes with links (nodes that are in domain boxes)
-      positionedNodes.forEach(node => {
-        const domain = node.data?.domain;
-        // Only apply offset if node is not isolated (is in a domain box)
-        const isIsolated = isolatedNodes.some(isoNode => isoNode.id === node.id);
-        if (domain && domainOffsets[domain] && !isIsolated) {
-          const offset = domainOffsets[domain];
-          node.position.x += offset.x;
-          node.position.y += offset.y;
-        }
-      });
+        // Apply domain offsets to all nodes in moved domains
+        positionedNodes.forEach(node => {
+          const domain = node.data?.domain;
+          if (domain && domainOffsets[domain]) {
+            const offset = domainOffsets[domain];
+            node.position.x += offset.x;
+            node.position.y += offset.y;
+          }
+        });
+      }
 
       setNodes([...domainBoxNodes, ...positionedNodes]);
       
@@ -486,7 +355,7 @@ export default function RFModelGraphView({ selectedKey }) {
       setEdges(finalEdges);
     }
     load();
-  }, [elk]);
+  }, [elk, layoutStyle, groupByDomains]);
 
   // Find selected entity details
   const selectedEntity = selectedId && graphData 
@@ -543,12 +412,62 @@ export default function RFModelGraphView({ selectedKey }) {
   }, [isResizing]);
 
   return (
-    <Box sx={{ display: 'flex', flex: 1, minWidth: 0, minHeight: 0 }}>
-      <Box sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
-        <ReactFlow
-      nodes={nodes.map(n => (
-        selectedId === n.id ? { ...n, style: { outline: '2px solid #ef4444', borderRadius: 8 } } : n
-      ))}
+    <Box sx={{ display: 'flex', flex: 1, minWidth: 0, minHeight: 0, flexDirection: 'column' }}>
+      {/* Layout controls */}
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 2, 
+        p: 1.5, 
+        borderBottom: '1px solid #e5e7eb',
+        bgcolor: 'background.paper',
+        alignItems: 'center'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13, minWidth: 80 }}>
+            Layout:
+          </Typography>
+          <select
+            value={layoutStyle}
+            onChange={(e) => onLayoutChange(e.target.value)}
+            style={{
+              padding: '4px 8px',
+              fontSize: '13px',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              minWidth: '140px'
+            }}
+          >
+            <option value="hierarchical">Hierarchical</option>
+            <option value="force">Force Directed</option>
+            <option value="star">Star Schema</option>
+          </select>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <input
+            type="checkbox"
+            checked={groupByDomains}
+            onChange={(e) => onGroupDomainsChange(e.target.checked)}
+            id="group-domains-toggle"
+            style={{ cursor: 'pointer' }}
+          />
+          <label 
+            htmlFor="group-domains-toggle" 
+            style={{ fontSize: '13px', cursor: 'pointer', userSelect: 'none' }}
+          >
+            Group by domains
+          </label>
+        </Box>
+      </Box>
+      
+      <Box sx={{ display: 'flex', flex: 1, minWidth: 0, minHeight: 0 }}>
+        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+          <ReactFlow
+        nodes={nodes.map(n => (
+          selectedId === n.id ? { ...n, style: { outline: '2px solid #ef4444', borderRadius: 8 } } : n
+        ))}
       edges={edges}
       nodeTypes={nodeTypes}
       fitView
@@ -664,10 +583,11 @@ export default function RFModelGraphView({ selectedKey }) {
           onClick={() => setDetailsExpanded(true)}
         >
           <IconButton size="small" title="Open details panel">
-            â—€
+            ◀
           </IconButton>
         </Box>
       )}
+      </Box>
     </Box>
   );
 }
