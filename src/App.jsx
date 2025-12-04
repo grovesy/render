@@ -91,7 +91,6 @@ export default function App() {
     }
     
     const newUrl = `${window.location.pathname}?${params.toString()}`;
-    console.log('[URL Sync]', { leftMode, viewMode, layoutStyle, groupByDomains, selectedModelKey, newUrl });
     window.history.replaceState({}, '', newUrl);
   }, [leftMode, selectedModelKey, selectedConceptPath, selectedADRPath, layoutStyle, groupByDomains, viewMode]);
 

@@ -34,51 +34,63 @@ function ADRIcon({ size = 20 }) {
 }
 
 export default function LeftModeSwitcher({ mode, onChange }) {
+  const buttons = [
+    { mode: 'concepts', label: 'Concepts', Icon: ConceptIcon },
+    { mode: 'models', label: 'Models', Icon: ModelIcon },
+    { mode: 'adrs', label: 'ADRs', Icon: ADRIcon },
+  ];
+
   return (
     <Box
       sx={{
-        width: 72,
+        width: 80,
         borderColor: "divider",
         bgcolor: "background.paper",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 1,
-        py: 2,
+        gap: 0.5,
+        py: 1.5,
       }}
     >
-      <Tooltip title="Models" placement="right" arrow>
-        <IconButton
-          size="small"
-          color={mode === "models" ? "primary" : "default"}
-          onClick={() => onChange("models")}
-          aria-label="Models"
-        >
-          <ModelIcon />
-        </IconButton>
-      </Tooltip>
-
-      <Tooltip title="Concepts" placement="right" arrow>
-        <IconButton
-          size="small"
-          color={mode === "concepts" ? "primary" : "default"}
-          onClick={() => onChange("concepts")}
-          aria-label="Concepts"
-        >
-          <ConceptIcon />
-        </IconButton>
-      </Tooltip>
-
-      <Tooltip title="ADRs" placement="right" arrow>
-        <IconButton
-          size="small"
-          color={mode === "adrs" ? "primary" : "default"}
-          onClick={() => onChange("adrs")}
-          aria-label="ADRs"
-        >
-          <ADRIcon />
-        </IconButton>
-      </Tooltip>
+      {buttons.map(({ mode: btnMode, label, Icon }) => (
+        <Tooltip key={btnMode} title={label} placement="right" arrow>
+          <Box
+            onClick={() => onChange(btnMode)}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 64,
+              height: 64,
+              cursor: 'pointer',
+              borderRadius: 1,
+              border: mode === btnMode ? '2px solid' : '2px solid transparent',
+              borderColor: mode === btnMode ? 'primary.main' : 'transparent',
+              bgcolor: mode === btnMode ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+              transition: 'all 0.2s',
+              '&:hover': {
+                bgcolor: mode === btnMode ? 'rgba(25, 118, 210, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+              }
+            }}
+          >
+            <Icon size={28} />
+            <Box
+              sx={{
+                fontSize: 9,
+                fontWeight: 600,
+                color: mode === btnMode ? 'primary.main' : 'text.secondary',
+                mt: 0.5,
+                letterSpacing: '0.02em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {label}
+            </Box>
+          </Box>
+        </Tooltip>
+      ))}
     </Box>
   );
 }
