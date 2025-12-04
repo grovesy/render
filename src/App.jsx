@@ -46,6 +46,7 @@ export default function App() {
   const initialAdr = params.get('adr');
   const initialLayout = params.get('layout') || 'hierarchical';
   const initialGroupDomains = params.get('groupDomains') !== 'false'; // default true
+  const initialViewMode = params.get('viewMode') || 'graph'; // 'graph' or 'table'
 
   const [leftMode, setLeftMode] = useState(initialMode); // 'models' | 'concepts' | 'adrs'
   // main view is controlled by the left-mode switcher now
@@ -64,6 +65,7 @@ export default function App() {
   // Model graph options
   const [layoutStyle, setLayoutStyle] = useState(initialLayout); // 'star' | 'force' | 'hierarchical'
   const [groupByDomains, setGroupByDomains] = useState(initialGroupDomains);
+  const [viewMode, setViewMode] = useState(initialViewMode); // 'graph' | 'table'
 
   const [filesError, setFilesError] = useState("");
 
@@ -76,6 +78,7 @@ export default function App() {
       params.set('model', selectedModelKey);
       params.set('layout', layoutStyle);
       params.set('groupDomains', groupByDomains.toString());
+      params.set('viewMode', viewMode);
     } else if (leftMode === 'concepts' && selectedConceptPath) {
       params.set('concept', selectedConceptPath);
     } else if (leftMode === 'adrs' && selectedADRPath) {
@@ -84,7 +87,7 @@ export default function App() {
     
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', newUrl);
-  }, [leftMode, selectedModelKey, selectedConceptPath, selectedADRPath, layoutStyle, groupByDomains]);
+  }, [leftMode, selectedModelKey, selectedConceptPath, selectedADRPath, layoutStyle, groupByDomains, viewMode]);
 
   // -------- Fetch /files once ----------
   useEffect(() => {
@@ -269,8 +272,10 @@ export default function App() {
                 selectedKey={selectedModelKey}
                 layoutStyle={layoutStyle}
                 groupByDomains={groupByDomains}
+                viewMode={viewMode}
                 onLayoutChange={setLayoutStyle}
                 onGroupDomainsChange={setGroupByDomains}
+                onViewModeChange={setViewMode}
               />
             ) : leftMode === "concepts" ? (
               <ConceptGraphView conceptPath={selectedConceptPath} />

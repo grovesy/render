@@ -1,5 +1,5 @@
 ﻿// src/components/RFModelGraphView.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { ReactFlow, Background, Controls, MarkerType } from "@xyflow/react";
 import { Box, Typography, IconButton } from "@mui/material";
 import "@xyflow/react/dist/style.css";
@@ -86,7 +86,7 @@ function JsonHighlighter({ code }) {
   );
 }
 
-export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDomains, onLayoutChange, onGroupDomainsChange }) {
+export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDomains, viewMode, onLayoutChange, onGroupDomainsChange, onViewModeChange }) {
   const [elk, setElk] = useState(null);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
@@ -98,6 +98,8 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
   const [isResizing, setIsResizing] = useState(false);
   const [collapsedNodes, setCollapsedNodes] = useState({}); // Track which nodes are collapsed
   const [allCollapsed, setAllCollapsed] = useState(true); // Global collapse state - start collapsed
+  const reactFlowInstance = useRef(null);
+  const tableRowRefs = useRef({});
 
   // Sync selectedKey from parent
   useEffect(() => {
@@ -105,6 +107,29 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
       setSelectedId(selectedKey);
     }
   }, [selectedKey]);
+
+  // Auto-focus on selected model
+  useEffect(() => {
+    if (!selectedId) return;
+
+    if (viewMode === 'graph' && reactFlowInstance.current) {
+      // Focus on node in graph view
+      const node = nodes.find(n => n.id === selectedId);
+      if (node) {
+        reactFlowInstance.current.fitView({
+          nodes: [{ id: selectedId }],
+          duration: 400,
+          padding: 0.3,
+        });
+      }
+    } else if (viewMode === 'table' && tableRowRefs.current[selectedId]) {
+      // Scroll to row in table view
+      tableRowRefs.current[selectedId].scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [selectedId, viewMode, nodes]);
 
   useEffect(() => {
     // Wait for ELK to be available from the global script
@@ -486,11 +511,11 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13, minWidth: 80 }}>
-            Layout:
+            View:
           </Typography>
           <select
-            value={layoutStyle}
-            onChange={(e) => onLayoutChange(e.target.value)}
+            value={viewMode}
+            onChange={(e) => onViewModeChange(e.target.value)}
             style={{
               padding: '4px 8px',
               fontSize: '13px',
@@ -498,53 +523,82 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
               borderRadius: '4px',
               backgroundColor: 'white',
               cursor: 'pointer',
-              minWidth: '140px'
+              minWidth: '100px'
             }}
           >
-            <option value="hierarchical">Hierarchical</option>
-            <option value="force">Force Directed</option>
-            <option value="star">Star Schema</option>
+            <option value="graph">Graph</option>
+            <option value="table">Table</option>
           </select>
         </Box>
         
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <input
-            type="checkbox"
-            checked={groupByDomains}
-            onChange={(e) => onGroupDomainsChange(e.target.checked)}
-            id="group-domains-toggle"
-            style={{ cursor: 'pointer' }}
-          />
-          <label 
-            htmlFor="group-domains-toggle" 
-            style={{ fontSize: '13px', cursor: 'pointer', userSelect: 'none' }}
-          >
-            Group by domains
-          </label>
-        </Box>
+        {viewMode === 'graph' && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 13, minWidth: 80 }}>
+              Layout:
+            </Typography>
+            <select
+              value={layoutStyle}
+              onChange={(e) => onLayoutChange(e.target.value)}
+              style={{
+                padding: '4px 8px',
+                fontSize: '13px',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                backgroundColor: 'white',
+                cursor: 'pointer',
+                minWidth: '140px'
+              }}
+            >
+              <option value="hierarchical">Hierarchical</option>
+              <option value="force">Force Directed</option>
+              <option value="star">Star Schema</option>
+            </select>
+          </Box>
+        )}
         
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <button
-            onClick={handleGlobalToggle}
-            style={{
-              padding: '4px 12px',
-              fontSize: '13px',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              backgroundColor: 'white',
-              cursor: 'pointer',
-              fontWeight: 500
-            }}
-            title={allCollapsed ? "Expand all nodes" : "Collapse all nodes"}
-          >
-            {allCollapsed ? '▼ Expand All' : '▲ Collapse All'}
-          </button>
-        </Box>
+        {viewMode === 'graph' && (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <input
+                type="checkbox"
+                checked={groupByDomains}
+                onChange={(e) => onGroupDomainsChange(e.target.checked)}
+                id="group-domains-toggle"
+                style={{ cursor: 'pointer' }}
+              />
+              <label 
+                htmlFor="group-domains-toggle" 
+                style={{ fontSize: '13px', cursor: 'pointer', userSelect: 'none' }}
+              >
+                Group by domains
+              </label>
+            </Box>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <button
+                onClick={handleGlobalToggle}
+                style={{
+                  padding: '4px 12px',
+                  fontSize: '13px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  fontWeight: 500
+                }}
+                title={allCollapsed ? "Expand all nodes" : "Collapse all nodes"}
+              >
+                {allCollapsed ? '▼ Expand All' : '▲ Collapse All'}
+              </button>
+            </Box>
+          </>
+        )}
       </Box>
       
       <Box sx={{ display: 'flex', flex: 1, minWidth: 0, minHeight: 0 }}>
-        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
-          <ReactFlow
+        {viewMode === 'graph' ? (
+          <Box sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+            <ReactFlow
         nodes={nodes.map(n => (
           selectedId === n.id ? { ...n, style: { outline: '2px solid #ef4444', borderRadius: 8 } } : n
         ))}
@@ -556,6 +610,7 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
       nodesDraggable={true}
       panOnDrag={[1, 2]}
       selectionOnDrag={false}
+      onInit={(instance) => { reactFlowInstance.current = instance; }}
       onNodeClick={(_, node) => setSelectedId(node.id)}
       defaultEdgeOptions={{
         type: 'default',
@@ -565,7 +620,112 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
           <Background variant="dots" gap={20} size={1} />
           <Controls />
         </ReactFlow>
-      </Box>
+          </Box>
+        ) : (
+          <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+            {graphData && graphData.entities && (() => {
+              // Group entities by domain
+              const domainGroups = {};
+              graphData.entities.forEach(entity => {
+                if (!domainGroups[entity.domain]) {
+                  domainGroups[entity.domain] = [];
+                }
+                domainGroups[entity.domain].push(entity);
+              });
+
+              return Object.entries(domainGroups).map(([domain, entities]) => (
+                <Box 
+                  key={domain} 
+                  sx={{ 
+                    mb: 6,
+                    p: 3,
+                    backgroundColor: '#f8fafc',
+                    borderRadius: 2,
+                    border: '2px solid #e2e8f0',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      mb: 3, 
+                      pb: 2, 
+                      borderBottom: '3px solid #3b82f6',
+                      fontWeight: 700,
+                      color: '#1e40af',
+                      fontSize: 18
+                    }}
+                  >
+                    {domain}
+                  </Typography>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
+                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Model</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Field</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>Type</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: 13 }}>References</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {entities.map((entity, entityIdx) => {
+                        const rowCount = Math.max(entity.attrs.length, 1);
+                        const isLastEntity = entityIdx === entities.length - 1;
+                        return entity.attrs.length > 0 ? (
+                          entity.attrs.map((attr, idx) => {
+                            const ref = entity.refs.find(r => r.field === attr.field);
+                            const isLastAttr = idx === entity.attrs.length - 1;
+                            return (
+                              <tr 
+                                key={`${entity.domain}:${entity.model}:${idx}`}
+                                ref={idx === 0 ? (el) => { tableRowRefs.current[`${entity.domain}:${entity.model}`] = el; } : null}
+                                style={{ 
+                                  borderBottom: isLastAttr && !isLastEntity ? '3px solid #cbd5e1' : '1px solid #e5e7eb',
+                                  cursor: 'pointer',
+                                  backgroundColor: selectedId === `${entity.domain}:${entity.model}` ? '#fef3c7' : 'white'
+                                }}
+                                onClick={() => setSelectedId(`${entity.domain}:${entity.model}`)}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = selectedId === `${entity.domain}:${entity.model}` ? '#fef3c7' : '#f9fafb'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = selectedId === `${entity.domain}:${entity.model}` ? '#fef3c7' : 'white'}
+                              >
+                                {idx === 0 && (
+                                  <td rowSpan={rowCount} style={{ padding: '12px', fontWeight: 600, fontSize: 13, verticalAlign: 'top', borderRight: '1px solid #f3f4f6' }}>{entity.title}</td>
+                                )}
+                                <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: 12 }}>{attr.field}</td>
+                                <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: 12, color: '#059669' }}>{attr.type}</td>
+                                <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: 11, color: '#6b7280' }}>
+                                  {ref ? `${ref.ref} [${ref.cardinality}]` : ''}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr 
+                            key={`${entity.domain}:${entity.model}`}
+                            ref={(el) => { tableRowRefs.current[`${entity.domain}:${entity.model}`] = el; }}
+                            style={{ 
+                              borderBottom: !isLastEntity ? '3px solid #cbd5e1' : '1px solid #e5e7eb',
+                              cursor: 'pointer',
+                              backgroundColor: selectedId === `${entity.domain}:${entity.model}` ? '#fef3c7' : 'white'
+                            }}
+                            onClick={() => setSelectedId(`${entity.domain}:${entity.model}`)}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = selectedId === `${entity.domain}:${entity.model}` ? '#fef3c7' : 'white'}
+                          >
+                            <td style={{ padding: '12px', fontWeight: 600, fontSize: 13 }}>{entity.title}</td>
+                            <td style={{ padding: '12px', fontStyle: 'italic', color: '#9ca3af' }}>No fields</td>
+                            <td style={{ padding: '12px' }}></td>
+                            <td style={{ padding: '12px' }}></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </Box>
+              ));
+            })()}
+          </Box>
+        )}
       
       {/* Details Panel */}
       {selectedEntity && (
