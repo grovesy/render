@@ -32,24 +32,22 @@ function buildDomainTree(jsonGroups) {
     let current = tree;
     parts.forEach((part, idx) => {
       if (!current[part]) {
-        current[part] = { children: {}, files: [], fullPath: parts.slice(0, idx + 1).reverse().join('.') };
+        current[part] = { 
+          children: {}, 
+          files: [], 
+          fullPath: parts.slice(0, idx + 1).reverse().join('.') 
+        };
       }
-      current = current[part].children;
+      current = current[part];
+      
+      // Move to children for next iteration
+      if (idx < parts.length - 1) {
+        current = current.children;
+      }
     });
     
-    // Store files at the leaf level
-    const leafKey = parts[parts.length - 1];
-    let leaf = tree;
-    parts.forEach(part => {
-      leaf = leaf[part].children;
-    });
-    
-    // Navigate back to set files
-    let target = tree;
-    for (let i = 0; i < parts.length - 1; i++) {
-      target = target[parts[i]].children;
-    }
-    target[parts[parts.length - 1]].files = files;
+    // Store files at the current (leaf) level
+    current.files = files;
   });
   
   return tree;
