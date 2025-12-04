@@ -481,6 +481,8 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
       edges={edges}
       nodeTypes={nodeTypes}
       fitView
+      minZoom={0.05}
+      maxZoom={2}
       onNodeClick={(_, node) => setSelectedId(node.id)}
       defaultEdgeOptions={{
         type: 'default',

@@ -210,6 +210,8 @@ export default function ConceptGraphView({ conceptPath }) {
           edges={edges}
           nodeTypes={nodeTypes}
           fitView
+          minZoom={0.05}
+          maxZoom={2}
           onNodeClick={(_, node) => setSelectedId(node.id)}
           defaultEdgeOptions={{
             type: 'default',
