@@ -64,15 +64,27 @@ function inferTypeForProperty(node) {
   return "any";
 }
 
-function collectRefs(schemaNode, fieldPath, outRefs) {
+function collectRefs(schemaNode, fieldPath, outRefs, parentContext = {}) {
   if (!schemaNode || typeof schemaNode !== "object") return;
 
   if (schemaNode.$ref && typeof schemaNode.$ref === "string") {
-    outRefs.push({ field: fieldPath, ref: schemaNode.$ref });
+    // Determine cardinality
+    let cardinality = "1";
+    if (parentContext.isArray) {
+      cardinality = "*";
+    } else if (parentContext.isOptional) {
+      cardinality = "0..1";
+    }
+    
+    outRefs.push({ 
+      field: fieldPath, 
+      ref: schemaNode.$ref,
+      cardinality 
+    });
   }
 
   if (schemaNode.type === "array" && schemaNode.items) {
-    collectRefs(schemaNode.items, fieldPath, outRefs);
+    collectRefs(schemaNode.items, fieldPath, outRefs, { ...parentContext, isArray: true });
   }
 
   if (schemaNode.properties && typeof schemaNode.properties === "object") {
@@ -89,7 +101,7 @@ function collectRefs(schemaNode, fieldPath, outRefs) {
   });
 }
 
-function collectAttributes(props, prefix, attrsOut, refsOut) {
+function collectAttributes(props, prefix, attrsOut, refsOut, required = []) {
   if (!props || typeof props !== "object") return;
 
   Object.entries(props).forEach(([name, propSchema]) => {
@@ -98,10 +110,11 @@ function collectAttributes(props, prefix, attrsOut, refsOut) {
     const typeLabel = inferTypeForProperty(propSchema);
     attrsOut.push({ field: fieldPath, type: typeLabel });
 
-    collectRefs(propSchema, fieldPath, refsOut);
+    const isOptional = !required.includes(name);
+    collectRefs(propSchema, fieldPath, refsOut, { isOptional });
 
     if (propSchema && propSchema.type === "object" && propSchema.properties) {
-      collectAttributes(propSchema.properties, fieldPath, attrsOut, refsOut);
+      collectAttributes(propSchema.properties, fieldPath, attrsOut, refsOut, propSchema.required || []);
     }
 
     if (
@@ -112,7 +125,7 @@ function collectAttributes(props, prefix, attrsOut, refsOut) {
       propSchema.items.properties
     ) {
       const arrayPrefix = fieldPath + "[]";
-      collectAttributes(propSchema.items.properties, arrayPrefix, attrsOut, refsOut);
+      collectAttributes(propSchema.items.properties, arrayPrefix, attrsOut, refsOut, propSchema.items.required || []);
     }
   });
 }
@@ -182,7 +195,7 @@ function buildGraphFromSchemas(schemaDirs) {
     const refs = [];
 
     if (schema.properties && typeof schema.properties === "object") {
-      collectAttributes(schema.properties, "", attrs, refs);
+      collectAttributes(schema.properties, "", attrs, refs, schema.required || []);
     }
 
     // dedupe refs, normalising away [] in paths
@@ -200,7 +213,8 @@ function buildGraphFromSchemas(schemaDirs) {
 
       dedupedRefs.push({
         field: normField,
-        ref: r.ref
+        ref: r.ref,
+        cardinality: r.cardinality || "1"
       });
     }
 

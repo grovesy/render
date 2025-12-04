@@ -187,17 +187,34 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
             return;
           }
           
-          console.log('Creating edge:', { edgeId, sourceId, targetId, field: r.field });
+          console.log('Creating edge:', { edgeId, sourceId, targetId, field: r.field, cardinality: r.cardinality });
           tempEdges.push({ 
             id: edgeId, 
             source: sourceId, 
             target: targetId,
-            field: r.field
+            field: r.field,
+            cardinality: r.cardinality || "1"
           });
         });
       });
 
       console.log('Total edges created:', tempEdges.length);
+
+      // Build reverse cardinality map: count how many edges point to each target
+      const reverseCardinalityMap = new Map();
+      tempEdges.forEach(e => {
+        const key = `${e.target}:${e.field}`;
+        reverseCardinalityMap.set(key, (reverseCardinalityMap.get(key) || 0) + 1);
+      });
+      
+      // Also check if multiple different sources point to same target (indicating * on target side)
+      const targetSourceMap = new Map();
+      tempEdges.forEach(e => {
+        if (!targetSourceMap.has(e.target)) {
+          targetSourceMap.set(e.target, new Set());
+        }
+        targetSourceMap.get(e.target).add(e.source);
+      });
 
       // Configure ELK layout based on selected style
       let layoutOptions = {};
@@ -379,7 +396,8 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
             color: '#111827'
           },
           style: { stroke: '#111827', strokeWidth: 2 },
-          label: e.field,
+          // Source side is * (many can have this ref), target is the cardinality from schema
+          label: e.cardinality ? `[*] ${e.field} [${e.cardinality}]` : e.field,
           labelStyle: { fill: '#111827', fontSize: 12, fontWeight: 500 }
         };
       });
@@ -535,6 +553,9 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
       fitView
       minZoom={0.05}
       maxZoom={2}
+      nodesDraggable={true}
+      panOnDrag={[1, 2]}
+      selectionOnDrag={false}
       onNodeClick={(_, node) => setSelectedId(node.id)}
       defaultEdgeOptions={{
         type: 'default',
@@ -593,15 +614,15 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
                   <IconButton
                     size="small"
-                    onClick={() => setDetailsWidth(Math.max(300, detailsWidth - 100))}
-                    title="Decrease width"
+                    onClick={() => setDetailsWidth(Math.min(800, detailsWidth + 100))}
+                    title="Increase width"
                   >
                     ◀
                   </IconButton>
                   <IconButton
                     size="small"
-                    onClick={() => setDetailsWidth(Math.min(800, detailsWidth + 100))}
-                    title="Increase width"
+                    onClick={() => setDetailsWidth(Math.max(300, detailsWidth - 100))}
+                    title="Decrease width"
                   >
                     ▶
                   </IconButton>
