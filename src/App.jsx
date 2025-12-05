@@ -40,6 +40,11 @@ export default function App() {
         currentTheme === 'dark' ? { default: "#121212", paper: "#1e1e1e" } :
         currentTheme === 'purple' ? { default: "#1a0933", paper: "#240046" } :
         currentTheme === 'dracula' ? { default: "#282a36", paper: "#383a59" } :
+        currentTheme === 'onedark' ? { default: "#282c34", paper: "#21252b" } :
+        currentTheme === 'monokai' ? { default: "#272822", paper: "#1e1f1c" } :
+        currentTheme === 'solarized' ? { default: "#002b36", paper: "#073642" } :
+        currentTheme === 'nord' ? { default: "#2e3440", paper: "#3b4252" } :
+        currentTheme === 'github' ? { default: "#0d1117", paper: "#161b22" } :
         currentTheme === 'dos' ? { default: "#0000aa", paper: "#000088" } :
         currentTheme === 'green' ? { default: "#001100", paper: "#002200" } :
         { default: "#121212", paper: "#1e1e1e" },
@@ -49,6 +54,11 @@ export default function App() {
         currentTheme === 'dark' ? '#333333' :
         currentTheme === 'purple' ? '#5a189a' :
         currentTheme === 'dracula' ? '#44475a' :
+        currentTheme === 'onedark' ? '#3e4451' :
+        currentTheme === 'monokai' ? '#49483e' :
+        currentTheme === 'solarized' ? '#073642' :
+        currentTheme === 'nord' ? '#4c566a' :
+        currentTheme === 'github' ? '#30363d' :
         currentTheme === 'dos' ? '#0000ff' :
         currentTheme === 'green' ? '#003300' :
         '#333333',
@@ -65,7 +75,9 @@ export default function App() {
       }),
     },
     typography: {
-      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+      fontFamily: currentTheme === 'dos' 
+        ? '"Perfect DOS VGA 437", "IBM VGA", "VGA", "Courier New", monospace'
+        : "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
     },
   });
 

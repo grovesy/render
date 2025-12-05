@@ -96,3 +96,43 @@ body,
 .graph-section > div {
   flex: 1;
 }
+
+/* DOS theme overrides */
+[data-theme="dos"] .tree-folder-label,
+[data-theme="dos"] .tree-item-label {
+  color: #ffff55 !important;
+  font-weight: 600;
+}
+
+[data-theme="dos"] .tree-item-button.selected .tree-item-label {
+  color: #000000 !important;
+  background-color: #55ffff;
+}
+
+[data-theme="dos"] .tree-folder-button:hover,
+[data-theme="dos"] .tree-item-button:hover {
+  background-color: rgba(85, 255, 255, 0.2) !important;
+}
+
+/* JSON syntax highlighting for DOS theme */
+[data-theme="dos"] .json-key {
+  color: #55ffff;
+  font-weight: bold;
+}
+
+[data-theme="dos"] .json-string {
+  color: #ffff55;
+}
+
+[data-theme="dos"] .json-number {
+  color: #55ff55;
+}
+
+[data-theme="dos"] .json-keyword {
+  color: #ff5555;
+  font-weight: bold;
+}
+
+[data-theme="dos"] pre {
+  color: #ffff55;
+}

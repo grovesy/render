@@ -316,6 +316,171 @@
   --domain-box-label-text: #00ff00;
 }
 
+/* One Dark Pro Theme */
+[data-theme="onedark"] {
+  --color-primary: #61afef;
+  --color-secondary: #c678dd;
+  --color-background: #282c34;
+  --color-background-paper: #21252b;
+  --color-text-primary: #abb2bf;
+  --color-text-secondary: #5c6370;
+  --color-divider: #3e4451;
+  --color-success: #98c379;
+  --color-selection-bg: #2c313c;
+  --color-hover-bg: #2c313a;
+  
+  --graph-bg: #282c34;
+  --graph-node-bg: #21252b;
+  --graph-node-text: #abb2bf;
+  --graph-node-border: #61afef;
+  --graph-edge: #61afef;
+  --graph-edge-label: #abb2bf;
+  --graph-selected: #c678dd;
+  
+  --node-header-bg: #21252b;
+  --node-body-bg: #282c34;
+  --node-body-text: #abb2bf;
+  --node-separator: #61afef;
+  --node-row-divider: #3e4451;
+  
+  --domain-box-bg: rgba(97, 175, 239, 0.1);
+  --domain-box-border: #61afef;
+  --domain-box-label-bg: #21252b;
+  --domain-box-label-text: #61afef;
+}
+
+/* Monokai Pro Theme */
+[data-theme="monokai"] {
+  --color-primary: #a9dc76;
+  --color-secondary: #ffd866;
+  --color-background: #272822;
+  --color-background-paper: #1e1f1c;
+  --color-text-primary: #fcfcfa;
+  --color-text-secondary: #939293;
+  --color-divider: #49483e;
+  --color-success: #a9dc76;
+  --color-selection-bg: #3e3d32;
+  --color-hover-bg: #2e2e26;
+  
+  --graph-bg: #272822;
+  --graph-node-bg: #1e1f1c;
+  --graph-node-text: #fcfcfa;
+  --graph-node-border: #a9dc76;
+  --graph-edge: #78dce8;
+  --graph-edge-label: #fcfcfa;
+  --graph-selected: #ffd866;
+  
+  --node-header-bg: #1e1f1c;
+  --node-body-bg: #272822;
+  --node-body-text: #fcfcfa;
+  --node-separator: #a9dc76;
+  --node-row-divider: #49483e;
+  
+  --domain-box-bg: rgba(169, 220, 118, 0.1);
+  --domain-box-border: #a9dc76;
+  --domain-box-label-bg: #1e1f1c;
+  --domain-box-label-text: #a9dc76;
+}
+
+/* Solarized Dark Theme */
+[data-theme="solarized"] {
+  --color-primary: #268bd2;
+  --color-secondary: #2aa198;
+  --color-background: #002b36;
+  --color-background-paper: #073642;
+  --color-text-primary: #839496;
+  --color-text-secondary: #586e75;
+  --color-divider: #073642;
+  --color-success: #859900;
+  --color-selection-bg: #0a4f5f;
+  --color-hover-bg: #053644;
+  
+  --graph-bg: #002b36;
+  --graph-node-bg: #073642;
+  --graph-node-text: #839496;
+  --graph-node-border: #268bd2;
+  --graph-edge: #2aa198;
+  --graph-edge-label: #839496;
+  --graph-selected: #b58900;
+  
+  --node-header-bg: #073642;
+  --node-body-bg: #002b36;
+  --node-body-text: #839496;
+  --node-separator: #268bd2;
+  --node-row-divider: #073642;
+  
+  --domain-box-bg: rgba(38, 139, 210, 0.1);
+  --domain-box-border: #268bd2;
+  --domain-box-label-bg: #073642;
+  --domain-box-label-text: #268bd2;
+}
+
+/* Nord Theme */
+[data-theme="nord"] {
+  --color-primary: #88c0d0;
+  --color-secondary: #81a1c1;
+  --color-background: #2e3440;
+  --color-background-paper: #3b4252;
+  --color-text-primary: #eceff4;
+  --color-text-secondary: #d8dee9;
+  --color-divider: #4c566a;
+  --color-success: #a3be8c;
+  --color-selection-bg: #434c5e;
+  --color-hover-bg: #3b4252;
+  
+  --graph-bg: #2e3440;
+  --graph-node-bg: #3b4252;
+  --graph-node-text: #eceff4;
+  --graph-node-border: #88c0d0;
+  --graph-edge: #88c0d0;
+  --graph-edge-label: #eceff4;
+  --graph-selected: #81a1c1;
+  
+  --node-header-bg: #3b4252;
+  --node-body-bg: #2e3440;
+  --node-body-text: #eceff4;
+  --node-separator: #88c0d0;
+  --node-row-divider: #4c566a;
+  
+  --domain-box-bg: rgba(136, 192, 208, 0.1);
+  --domain-box-border: #88c0d0;
+  --domain-box-label-bg: #3b4252;
+  --domain-box-label-text: #88c0d0;
+}
+
+/* GitHub Dark Theme */
+[data-theme="github"] {
+  --color-primary: #58a6ff;
+  --color-secondary: #79c0ff;
+  --color-background: #0d1117;
+  --color-background-paper: #161b22;
+  --color-text-primary: #c9d1d9;
+  --color-text-secondary: #8b949e;
+  --color-divider: #30363d;
+  --color-success: #3fb950;
+  --color-selection-bg: #1f6feb1a;
+  --color-hover-bg: #21262d;
+  
+  --graph-bg: #0d1117;
+  --graph-node-bg: #161b22;
+  --graph-node-text: #c9d1d9;
+  --graph-node-border: #58a6ff;
+  --graph-edge: #58a6ff;
+  --graph-edge-label: #c9d1d9;
+  --graph-selected: #79c0ff;
+  
+  --node-header-bg: #161b22;
+  --node-body-bg: #0d1117;
+  --node-body-text: #c9d1d9;
+  --node-separator: #58a6ff;
+  --node-row-divider: #30363d;
+  
+  --domain-box-bg: rgba(88, 166, 255, 0.1);
+  --domain-box-border: #58a6ff;
+  --domain-box-label-bg: #161b22;
+  --domain-box-label-text: #58a6ff;
+}
+
 /* Emacs Theme */
 [data-theme="emacs"] {
   --color-primary: #7c7c7c;
@@ -416,6 +581,51 @@
 
 [data-theme="green"] .react-flow__edge-text {
   fill: #00ff00 !important;
+}
+
+[data-theme="onedark"] .react-flow__edge-path {
+  stroke: #61afef !important;
+  stroke-width: 1.5px;
+}
+
+[data-theme="onedark"] .react-flow__edge-text {
+  fill: #abb2bf !important;
+}
+
+[data-theme="monokai"] .react-flow__edge-path {
+  stroke: #78dce8 !important;
+  stroke-width: 1.5px;
+}
+
+[data-theme="monokai"] .react-flow__edge-text {
+  fill: #fcfcfa !important;
+}
+
+[data-theme="solarized"] .react-flow__edge-path {
+  stroke: #2aa198 !important;
+  stroke-width: 1.5px;
+}
+
+[data-theme="solarized"] .react-flow__edge-text {
+  fill: #839496 !important;
+}
+
+[data-theme="nord"] .react-flow__edge-path {
+  stroke: #88c0d0 !important;
+  stroke-width: 1.5px;
+}
+
+[data-theme="nord"] .react-flow__edge-text {
+  fill: #eceff4 !important;
+}
+
+[data-theme="github"] .react-flow__edge-path {
+  stroke: #58a6ff !important;
+  stroke-width: 1.5px;
+}
+
+[data-theme="github"] .react-flow__edge-text {
+  fill: #c9d1d9 !important;
 }
 
 /* UML Node Styles */
@@ -575,6 +785,177 @@
 
 [data-theme="dark"] .json-number {
   color: #b5cea8;
+}
+
+/* Purple theme JSON highlighting */
+[data-theme="purple"] .json-key {
+  color: #c77dff;
+  font-weight: bold;
+}
+
+[data-theme="purple"] .json-string {
+  color: #e0aaff;
+}
+
+[data-theme="purple"] .json-keyword {
+  color: #9d4edd;
+  font-weight: bold;
+}
+
+[data-theme="purple"] .json-number {
+  color: #7b2cbf;
+}
+
+/* Dracula theme JSON highlighting */
+[data-theme="dracula"] .json-key {
+  color: #50fa7b;
+  font-weight: bold;
+}
+
+[data-theme="dracula"] .json-string {
+  color: #f1fa8c;
+}
+
+[data-theme="dracula"] .json-keyword {
+  color: #ff79c6;
+  font-weight: bold;
+}
+
+[data-theme="dracula"] .json-number {
+  color: #bd93f9;
+}
+
+/* DOS Edit theme JSON highlighting */
+[data-theme="dos"] .json-key {
+  color: #ffff00;
+  font-weight: bold;
+}
+
+[data-theme="dos"] .json-string {
+  color: #00ffff;
+}
+
+[data-theme="dos"] .json-keyword {
+  color: #ffffff;
+  font-weight: bold;
+}
+
+[data-theme="dos"] .json-number {
+  color: #00ff00;
+}
+
+/* Green Screen theme JSON highlighting */
+[data-theme="green"] .json-key {
+  color: #00ff00;
+  font-weight: bold;
+}
+
+[data-theme="green"] .json-string {
+  color: #00cc00;
+}
+
+[data-theme="green"] .json-keyword {
+  color: #00ff00;
+  font-weight: bold;
+}
+
+[data-theme="green"] .json-number {
+  color: #00dd00;
+}
+
+/* One Dark Pro theme JSON highlighting */
+[data-theme="onedark"] .json-key {
+  color: #e06c75;
+  font-weight: bold;
+}
+
+[data-theme="onedark"] .json-string {
+  color: #98c379;
+}
+
+[data-theme="onedark"] .json-keyword {
+  color: #c678dd;
+  font-weight: bold;
+}
+
+[data-theme="onedark"] .json-number {
+  color: #d19a66;
+}
+
+/* Monokai Pro theme JSON highlighting */
+[data-theme="monokai"] .json-key {
+  color: #ff6188;
+  font-weight: bold;
+}
+
+[data-theme="monokai"] .json-string {
+  color: #ffd866;
+}
+
+[data-theme="monokai"] .json-keyword {
+  color: #fc9867;
+  font-weight: bold;
+}
+
+[data-theme="monokai"] .json-number {
+  color: #ab9df2;
+}
+
+/* Solarized Dark theme JSON highlighting */
+[data-theme="solarized"] .json-key {
+  color: #268bd2;
+  font-weight: bold;
+}
+
+[data-theme="solarized"] .json-string {
+  color: #2aa198;
+}
+
+[data-theme="solarized"] .json-keyword {
+  color: #859900;
+  font-weight: bold;
+}
+
+[data-theme="solarized"] .json-number {
+  color: #d33682;
+}
+
+/* Nord theme JSON highlighting */
+[data-theme="nord"] .json-key {
+  color: #88c0d0;
+  font-weight: bold;
+}
+
+[data-theme="nord"] .json-string {
+  color: #a3be8c;
+}
+
+[data-theme="nord"] .json-keyword {
+  color: #81a1c1;
+  font-weight: bold;
+}
+
+[data-theme="nord"] .json-number {
+  color: #b48ead;
+}
+
+/* GitHub Dark theme JSON highlighting */
+[data-theme="github"] .json-key {
+  color: #79c0ff;
+  font-weight: bold;
+}
+
+[data-theme="github"] .json-string {
+  color: #a5d6ff;
+}
+
+[data-theme="github"] .json-keyword {
+  color: #ff7b72;
+  font-weight: bold;
+}
+
+[data-theme="github"] .json-number {
+  color: #79c0ff;
 }
 
 /* Form Controls */

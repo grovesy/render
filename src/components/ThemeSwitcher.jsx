@@ -12,6 +12,11 @@ export default function ThemeSwitcher({ currentTheme, onThemeChange }) {
     { value: 'dark', label: 'Dark' },
     { value: 'purple', label: 'Purple' },
     { value: 'dracula', label: 'Dracula' },
+    { value: 'onedark', label: 'One Dark Pro' },
+    { value: 'monokai', label: 'Monokai Pro' },
+    { value: 'solarized', label: 'Solarized Dark' },
+    { value: 'nord', label: 'Nord' },
+    { value: 'github', label: 'GitHub Dark' },
     { value: 'dos', label: 'DOS Edit' },
     { value: 'green', label: 'Green Screen' },
   ];
