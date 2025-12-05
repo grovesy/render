@@ -24,9 +24,23 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
   const reactFlowInstance = useRef(null);
   const tableRowRefs = useRef({});
   const jsonCardRefs = useRef({});
+  const hasInitialized = useRef(false);
 
   // Use custom hook for graph layout
   const { nodes, edges } = useGraphLayout(elk, graphData, layoutStyle, groupByDomains, collapsedNodes, setCollapsedNodes);
+
+  // Fit view when layout changes and edges are ready
+  useEffect(() => {
+    if (viewMode === 'graph' && reactFlowInstance.current && nodes.length > 0 && edges.length > 0) {
+      // Small delay to ensure React Flow has rendered everything
+      setTimeout(() => {
+        if (reactFlowInstance.current) {
+          reactFlowInstance.current.fitView({ padding: 0.2, duration: 200 });
+          hasInitialized.current = true;
+        }
+      }, 100);
+    }
+  }, [nodes, edges, viewMode]);
 
   // Sync selectedKey from parent
   useEffect(() => {
@@ -174,13 +188,15 @@ export default function RFModelGraphView({ selectedKey, layoutStyle, groupByDoma
               }))}
               edges={edges}
               nodeTypes={nodeTypes}
-      fitView
+      fitView={false}
       minZoom={0.05}
       maxZoom={2}
       nodesDraggable={true}
       panOnDrag={[1, 2]}
       selectionOnDrag={false}
-      onInit={(instance) => { reactFlowInstance.current = instance; }}
+      onInit={(instance) => { 
+        reactFlowInstance.current = instance;
+      }}
       onNodeClick={(_, node) => setSelectedId(node.id)}
       defaultEdgeOptions={{
         type: 'default',

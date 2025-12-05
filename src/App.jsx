@@ -47,6 +47,10 @@ export default function App() {
         currentTheme === 'github' ? { default: "#0d1117", paper: "#161b22" } :
         currentTheme === 'dos' ? { default: "#0000aa", paper: "#000088" } :
         currentTheme === 'green' ? { default: "#001100", paper: "#002200" } :
+        currentTheme === 'emacs' ? { default: "#2e3436", paper: "#3c3f41" } :
+        currentTheme === 'vim' ? { default: "#1c1c1c", paper: "#262626" } :
+        currentTheme === 'amber' ? { default: "#0d0d0d", paper: "#1a1a1a" } :
+        currentTheme === 'matrix' ? { default: "#000000", paper: "#0a0a0a" } :
         { default: "#121212", paper: "#1e1e1e" },
       divider: 
         currentTheme === 'light' ? '#e5e7eb' :
@@ -61,6 +65,10 @@ export default function App() {
         currentTheme === 'github' ? '#30363d' :
         currentTheme === 'dos' ? '#0000ff' :
         currentTheme === 'green' ? '#003300' :
+        currentTheme === 'emacs' ? '#555753' :
+        currentTheme === 'vim' ? '#3a3a3a' :
+        currentTheme === 'amber' ? '#ff9900' :
+        currentTheme === 'matrix' ? '#003300' :
         '#333333',
       ...(currentTheme === 'paper' && {
         text: { 
@@ -75,8 +83,8 @@ export default function App() {
       }),
     },
     typography: {
-      fontFamily: currentTheme === 'dos' 
-        ? '"Perfect DOS VGA 437", "IBM VGA", "VGA", "Courier New", monospace'
+      fontFamily: (currentTheme === 'dos' || currentTheme === 'amber' || currentTheme === 'matrix' || currentTheme === 'green' || currentTheme === 'emacs' || currentTheme === 'vim')
+        ? '"Courier New", "Courier", monospace'
         : "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
     },
   });

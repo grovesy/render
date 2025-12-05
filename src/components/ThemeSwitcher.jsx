@@ -19,6 +19,10 @@ export default function ThemeSwitcher({ currentTheme, onThemeChange }) {
     { value: 'github', label: 'GitHub Dark' },
     { value: 'dos', label: 'DOS Edit' },
     { value: 'green', label: 'Green Screen' },
+    { value: 'emacs', label: 'Emacs' },
+    { value: 'vim', label: 'Vim Dark' },
+    { value: 'amber', label: 'Amber Terminal' },
+    { value: 'matrix', label: 'Matrix' },
   ];
 
   const handleClick = (event) => {

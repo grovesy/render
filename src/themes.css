@@ -316,6 +316,114 @@
   --domain-box-label-text: #00ff00;
 }
 
+/* Commodore 64 Theme */
+[data-theme="c64"] {
+  --color-primary: #7869c4;
+  --color-secondary: #8b7ec8;
+  --color-background: #3e31a2;
+  --color-background-paper: #4831c0;
+  --color-text-primary: #7869c4;
+  --color-text-secondary: #6c5eb5;
+  --color-divider: #6c5eb5;
+  --color-success: #7869c4;
+  --color-selection-bg: #5542b5;
+  --color-hover-bg: #4a3ab0;
+  
+  --font-family-system: "Courier New", Courier, monospace;
+  --font-family-mono: "Courier New", Courier, monospace;
+  
+  --graph-bg: #3e31a2;
+  --graph-node-bg: #4831c0;
+  --graph-node-text: #7869c4;
+  --graph-node-border: #7869c4;
+  --graph-edge: #7869c4;
+  --graph-edge-label: #7869c4;
+  --graph-selected: #8b7ec8;
+  
+  --node-header-bg: #4831c0;
+  --node-body-bg: #3e31a2;
+  --node-body-text: #7869c4;
+  --node-separator: #7869c4;
+  --node-row-divider: #6c5eb5;
+  
+  --domain-box-bg: rgba(120, 105, 196, 0.1);
+  --domain-box-border: #7869c4;
+  --domain-box-label-bg: #4831c0;
+  --domain-box-label-text: #7869c4;
+}
+
+/* Amber Terminal Theme */
+[data-theme="amber"] {
+  --color-primary: #ffb000;
+  --color-secondary: #ff9900;
+  --color-background: #0d0d0d;
+  --color-background-paper: #1a1a1a;
+  --color-text-primary: #ffb000;
+  --color-text-secondary: #cc8800;
+  --color-divider: #ff9900;
+  --color-success: #ffb000;
+  --color-selection-bg: #332200;
+  --color-hover-bg: #221a00;
+  
+  --font-family-system: "Courier New", Courier, monospace;
+  --font-family-mono: "Courier New", Courier, monospace;
+  
+  --graph-bg: #0d0d0d;
+  --graph-node-bg: #1a1a1a;
+  --graph-node-text: #ffb000;
+  --graph-node-border: #ff9900;
+  --graph-edge: #ffb000;
+  --graph-edge-label: #ffb000;
+  --graph-selected: #ffcc00;
+  
+  --node-header-bg: #1a1a1a;
+  --node-body-bg: #0d0d0d;
+  --node-body-text: #ffb000;
+  --node-separator: #ff9900;
+  --node-row-divider: #663300;
+  
+  --domain-box-bg: rgba(255, 176, 0, 0.1);
+  --domain-box-border: #ff9900;
+  --domain-box-label-bg: #1a1a1a;
+  --domain-box-label-text: #ffb000;
+}
+
+/* Matrix Theme */
+[data-theme="matrix"] {
+  --color-primary: #00ff41;
+  --color-secondary: #008f11;
+  --color-background: #000000;
+  --color-background-paper: #0a0a0a;
+  --color-text-primary: #00ff41;
+  --color-text-secondary: #008f11;
+  --color-divider: #003300;
+  --color-success: #00ff41;
+  --color-selection-bg: #002200;
+  --color-hover-bg: #001a00;
+  
+  --font-family-system: "Courier New", Courier, monospace;
+  --font-family-mono: "Courier New", Courier, monospace;
+  
+  --graph-bg: #000000;
+  --graph-node-bg: #0a0a0a;
+  --graph-node-text: #00ff41;
+  --graph-node-border: #00ff41;
+  --graph-edge: #00ff41;
+  --graph-edge-label: #00ff41;
+  --graph-selected: #00ff88;
+  
+  --node-header-bg: #0a0a0a;
+  --node-body-bg: #000000;
+  --node-body-text: #00ff41;
+  --node-separator: #00ff41;
+  --node-row-divider: #003300;
+  
+  --domain-box-bg: rgba(0, 255, 65, 0.05);
+  --domain-box-border: #00ff41;
+  --domain-box-label-bg: #0a0a0a;
+  --domain-box-label-text: #00ff41;
+}
+
 /* One Dark Pro Theme */
 [data-theme="onedark"] {
   --color-primary: #61afef;
@@ -626,6 +734,33 @@
 
 [data-theme="github"] .react-flow__edge-text {
   fill: #c9d1d9 !important;
+}
+
+[data-theme="c64"] .react-flow__edge-path {
+  stroke: #7869c4 !important;
+  stroke-width: 2px;
+}
+
+[data-theme="c64"] .react-flow__edge-text {
+  fill: #7869c4 !important;
+}
+
+[data-theme="amber"] .react-flow__edge-path {
+  stroke: #ffb000 !important;
+  stroke-width: 2px;
+}
+
+[data-theme="amber"] .react-flow__edge-text {
+  fill: #ffb000 !important;
+}
+
+[data-theme="matrix"] .react-flow__edge-path {
+  stroke: #00ff41 !important;
+  stroke-width: 2px;
+}
+
+[data-theme="matrix"] .react-flow__edge-text {
+  fill: #00ff41 !important;
 }
 
 /* UML Node Styles */
@@ -956,6 +1091,63 @@
 
 [data-theme="github"] .json-number {
   color: #79c0ff;
+}
+
+/* Commodore 64 theme JSON highlighting */
+[data-theme="c64"] .json-key {
+  color: #8b7ec8;
+  font-weight: bold;
+}
+
+[data-theme="c64"] .json-string {
+  color: #7869c4;
+}
+
+[data-theme="c64"] .json-keyword {
+  color: #9d8fd1;
+  font-weight: bold;
+}
+
+[data-theme="c64"] .json-number {
+  color: #7869c4;
+}
+
+/* Amber Terminal theme JSON highlighting */
+[data-theme="amber"] .json-key {
+  color: #ffcc00;
+  font-weight: bold;
+}
+
+[data-theme="amber"] .json-string {
+  color: #ffb000;
+}
+
+[data-theme="amber"] .json-keyword {
+  color: #ff9900;
+  font-weight: bold;
+}
+
+[data-theme="amber"] .json-number {
+  color: #ffb000;
+}
+
+/* Matrix theme JSON highlighting */
+[data-theme="matrix"] .json-key {
+  color: #00ff88;
+  font-weight: bold;
+}
+
+[data-theme="matrix"] .json-string {
+  color: #00ff41;
+}
+
+[data-theme="matrix"] .json-keyword {
+  color: #00dd33;
+  font-weight: bold;
+}
+
+[data-theme="matrix"] .json-number {
+  color: #00ff41;
 }
 
 /* Form Controls */
