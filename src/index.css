@@ -96,3 +96,16 @@ body,
 .graph-section > div {
   flex: 1;
 }
+
+/* Override ReactFlow edge colors for better visibility */
+.react-flow {
+  --xy-edge-stroke-default: #111827;
+  --xy-edge-stroke-width-default: 2;
+  --xy-edge-stroke-selected-default: #ef4444;
+}
+
+.react-flow.dark {
+  --xy-edge-stroke-default: #e5e7eb;
+  --xy-edge-stroke-width-default: 2;
+  --xy-edge-stroke-selected-default: #ef4444;
+}
