@@ -13,3 +13,4 @@ A Assessment has many TechnicalRule
 A ScoreCard has many DataQualityResult
 A ScoreCard produces many DataQualityException
 A Assessment produces many ScoreCard
+

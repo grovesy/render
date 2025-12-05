@@ -6,9 +6,9 @@ import {
   ListItemButton,
   ListSubheader,
   Typography,
-  Collapse,
 } from "@mui/material";
 import ApiClient from "../lib/ApiClient";
+import TreeView from "./shared/TreeView";
 
 const api = ApiClient;
 
@@ -75,7 +75,7 @@ function buildDomainTree(jsonGroups) {
       if (!current[part]) {
         current[part] = { 
           children: {}, 
-          files: [], 
+          items: [], 
           fullPath: parts.slice(0, idx + 1).reverse().join('.') 
         };
       }
@@ -88,92 +88,24 @@ function buildDomainTree(jsonGroups) {
     });
     
     // Store files at the current (leaf) level
-    current.files = files;
+    current.items = files;
   });
   
   return tree;
 }
 
-function DomainTreeNode({ name, node, level, selectedModelKey, onJsonFileClick, expanded, onToggle }) {
-  const hasChildren = Object.keys(node.children).length > 0;
-  const hasFiles = node.files && node.files.length > 0;
-  const isExpanded = expanded[node.fullPath] !== false; // default true
-
-  return (
-    <Box>
-      {hasChildren || hasFiles ? (
-        <>
-          <ListItemButton
-            dense
-            sx={{ 
-              pl: 2 + level * 1.5,
-              py: 0.5,
-              backgroundColor: hasFiles ? 'rgba(59, 130, 246, 0.05)' : 'transparent'
-            }}
-            onClick={() => onToggle(node.fullPath)}
-          >
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                fontWeight: hasFiles ? 700 : 600, 
-                fontSize: 12,
-                color: hasFiles ? '#1e40af' : 'text.primary'
-              }}
-            >
-              {isExpanded ? '▼' : '▶'} {name}
-            </Typography>
-          </ListItemButton>
-          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-            {hasFiles && node.files.map((f) => {
-              // Generate model key for comparison
-              const fileKey = `${node.fullPath}:${f.name.replace('.json', '')}`;
-              const isSelected = selectedModelKey && fileKey === selectedModelKey;
-              
-              return (
-                <ListItemButton
-                  key={f.path}
-                  dense
-                  selected={isSelected}
-                  sx={{ 
-                    pl: 3 + (level + 1) * 1.5, 
-                    py: 0.3,
-                    backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                    '&:hover': {
-                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.25)' : 'rgba(0, 0, 0, 0.04)'
-                    }
-                  }}
-                  onClick={() => onJsonFileClick(f.path)}
-                >
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontSize: 13,
-                      fontWeight: isSelected ? 600 : 400,
-                      color: isSelected ? '#1e40af' : 'text.primary'
-                    }}
-                  >
-                    {f.name}
-                  </Typography>
-                </ListItemButton>
-              );
-            })}
-            {hasChildren && Object.entries(node.children).map(([childName, childNode]) => (
-              <DomainTreeNode
-                key={childName}
-                name={childName}
-                node={childNode}
-                level={level + 1}
-                selectedModelKey={selectedModelKey}
-                onJsonFileClick={onJsonFileClick}
-                expanded={expanded}
-                onToggle={onToggle}
-              />
-            ))}
-          </Collapse>
-        </>
-      ) : null}
-    </Box>
-  );
+function buildConceptTree(conceptGroups) {
+  const tree = {};
+  
+  Object.entries(conceptGroups).forEach(([dir, files]) => {
+    tree[dir] = {
+      children: {},
+      items: files,
+      fullPath: dir
+    };
+  });
+  
+  return tree;
 }
 
 function groupByDir(files) {
@@ -195,9 +127,9 @@ export default function LeftSidebar({
   viewMode = "all", // 'models' | 'concepts' | 'all'
 }) {
   const { jsonModels = [], concepts = [] } = fileIndex;
-  const [expanded, setExpanded] = useState({});
   const [jsonGroups, setJsonGroups] = useState({});
   const [domainTree, setDomainTree] = useState({});
+  const [conceptTree, setConceptTree] = useState({});
 
   // Load and group JSON models by domain from $id
   useEffect(() => {
@@ -211,89 +143,49 @@ export default function LeftSidebar({
     }
   }, [jsonModels]);
 
-  const conceptGroups = groupByDir(concepts);
-
-  const handleToggle = (path) => {
-    setExpanded(prev => ({
-      ...prev,
-      [path]: prev[path] === false ? true : false
-    }));
-  };
+  // Build concept tree
+  useEffect(() => {
+    const groups = groupByDir(concepts);
+    setConceptTree(buildConceptTree(groups));
+  }, [concepts]);
 
   const modelsSection = (
-    <List
-      dense
-        subheader={
-          <ListSubheader
-            component="div"
-            sx={{
-              bgcolor: "background.paper",
-              textTransform: "uppercase",
-              fontSize: 11,
-              letterSpacing: "0.08em",
-              color: "text.secondary",
-            }}
-          >
-            JSON Models
-          </ListSubheader>
-        }
-      >
-        {Object.keys(jsonGroups).length === 0 && (
-          <Typography
-            variant="caption"
-            sx={{ px: 2, py: 1, color: "text.disabled" }}
-          >
-            No JSON models found
-          </Typography>
-        )}
-        {Object.entries(domainTree).map(([rootName, rootNode]) => (
-          <DomainTreeNode
-            key={rootName}
-            name={rootName}
-            node={rootNode}
-            level={0}
-            selectedModelKey={selectedModelKey}
-            onJsonFileClick={onJsonFileClick}
-            expanded={expanded}
-            onToggle={handleToggle}
-          />
-        ))}
-    </List>
+    <Box>
+      <Box sx={{ px: 2, pt: 1, pb: 0.5 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            textTransform: "uppercase",
+            fontSize: 11,
+            letterSpacing: "0.08em",
+            color: "text.secondary",
+          }}
+        >
+          JSON Models
+        </Typography>
+      </Box>
+      <TreeView
+        tree={domainTree}
+        selectedItemId={selectedModelKey}
+        onItemClick={(item) => onJsonFileClick(item.path)}
+        getItemId={(item, node) => `${node.fullPath}:${item.name.replace('.json', '')}`}
+        renderItem={(item) => item.name.replace('.json', '')}
+        emptyMessage="No JSON models found"
+      />
+    </Box>
   );
 
   const conceptsSection = (
-    <List dense>
-        {Object.keys(conceptGroups).length === 0 && (
-          <Typography
-            variant="caption"
-            sx={{ px: 2, py: 1, color: "text.disabled" }}
-          >
-            No .concept files found
-          </Typography>
-        )}
-        {Object.entries(conceptGroups).map(([dir, files]) => (
-          <Box key={dir}>
-            <Typography
-              variant="caption"
-              sx={{ px: 2, pt: 1, pb: 0.5, color: "text.primary", fontWeight: 700, fontSize: 12 }}
-            >
-              {dir}
-            </Typography>
-            {files.map((f) => (
-              <ListItemButton
-                key={f.path}
-                dense
-                sx={{ pl: 3 }}
-                onClick={() => onConceptFileClick(f.path)}
-              >
-                <Typography variant="body2" sx={{ fontSize: 13 }}>
-                  {f.name}
-                </Typography>
-              </ListItemButton>
-            ))}
-          </Box>
-        ))}
-    </List>
+    <Box>
+      <TreeView
+        tree={conceptTree}
+        selectedItemId={null}
+        onItemClick={(item) => onConceptFileClick(item.path)}
+        getItemId={(item) => item.path}
+        renderItem={(item) => item.name}
+        emptyMessage="No .concept files found"
+      />
+    </Box>
   );
 
   return (

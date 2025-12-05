@@ -49,7 +49,7 @@ export default function ADRViewer({ selectedPath }) {
       sx={{
         flex: 1,
         overflow: "auto",
-        bgcolor: "#ffffff",
+        bgcolor: 'background.default',
         p: 3,
       }}
     >
@@ -86,7 +86,8 @@ export default function ADRViewer({ selectedPath }) {
               fontWeight: 600,
               mb: 1.5,
               mt: 3,
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: 1,
+              borderColor: 'divider',
               pb: 0.5,
             },
             "& h3": {
@@ -103,7 +104,7 @@ export default function ADRViewer({ selectedPath }) {
               mb: 1.5,
             },
             "& code": {
-              bgcolor: "#f3f4f6",
+              bgcolor: 'background.paper',
               px: 0.5,
               py: 0.25,
               borderRadius: 0.5,
@@ -111,7 +112,7 @@ export default function ADRViewer({ selectedPath }) {
               fontFamily: "monospace",
             },
             "& pre": {
-              bgcolor: "#f9fafb",
+              bgcolor: 'background.paper',
               p: 2,
               borderRadius: 1,
               overflow: "auto",

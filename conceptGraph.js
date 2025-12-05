@@ -2,10 +2,19 @@
 const fs = require("fs");
 
 /**
- * Parse a simple DSL like:
+ * Parse a simple DSL with generic pattern:
+ *   A <Entity> <statement> <Entity>
+ *   AN <Entity> <statement> <Entity>
+ * 
+ * Where:
+ *   - Entities start with a capital letter (e.g., DataDomain, UseCase)
+ *   - Statements are lowercase with spaces (e.g., has many, is implemented by)
+ *
+ * Examples:
  *   A DataDomain has many UseCases
  *   A UseCase has DataConsumerRequirements
- *   The execution of a Control produces DataQualityResults
+ *   An Assessment produces many ScoreCards
+ *   A LogicalRule is implemented by many TechnicalRules
  *
  * Returns:
  * {
@@ -37,91 +46,23 @@ function parseConceptDsl(text) {
     .filter((l) => l && !l.startsWith("//") && !l.startsWith("#"));
 
   for (const line of lines) {
-    let m;
-
-    // 1) A X has many Y
-    m = /^A\s+(\w+)\s+has\s+many\s+(\w+)/i.exec(line);
-    if (m) {
-      const [, x, y] = m;
-      addEdge(x, y, "has many");
-      continue;
+    // Generic pattern: A|AN <Entity> <statement> <Entity>
+    // Entity: starts with capital letter, followed by alphanumeric characters
+    // Statement: lowercase words with spaces between entities
+    const pattern = /^(?:A|An)\s+([A-Z]\w+)\s+(.+?)\s+([A-Z]\w+)$/;
+    const match = pattern.exec(line);
+    
+    if (match) {
+      const [, sourceEntity, statement, targetEntity] = match;
+      
+      // Normalize the statement (trim and convert to lowercase)
+      const normalizedStatement = statement.trim().toLowerCase();
+      
+      addEdge(sourceEntity, targetEntity, normalizedStatement);
+    } else {
+      // If pattern doesn't match, warn but don't fail
+      console.warn("[conceptGraph] Unrecognized line:", line);
     }
-
-    // 2) A X has Y
-    m = /^A\s+(\w+)\s+has\s+(\w+)/i.exec(line);
-    if (m) {
-      const [, x, y] = m;
-      addEdge(x, y, "has");
-      continue;
-    }
-
-    // 3) An X has many Y
-    m = /^An\s+(\w+)\s+has\s+many\s+(\w+)/i.exec(line);
-    if (m) {
-      const [, x, y] = m;
-      addEdge(x, y, "has many");
-      continue;
-    }
-
-    // 4) An X has Y
-    m = /^An\s+(\w+)\s+has\s+(\w+)/i.exec(line);
-    if (m) {
-      const [, x, y] = m;
-      addEdge(x, y, "has");
-      continue;
-    }
-
-    // 5) A X is implemented by many Y
-    m = /^A\s+(\w+)\s+is\s+implemented\s+by\s+many\s+(\w+)/i.exec(line);
-    if (m) {
-      const [, x, y] = m;
-      addEdge(x, y, "implemented by many");
-      continue;
-    }
-
-    // 6) A X is implemented by Y
-    m = /^A\s+(\w+)\s+is\s+implemented\s+by\s+(\w+)/i.exec(line);
-    if (m) {
-      const [, x, y] = m;
-      addEdge(x, y, "implemented by");
-      continue;
-    }
-
-    // 7) The execution of a X produces many Y
-    m = /^The\s+execution\s+of\s+a\s+(\w+)\s+produces\s+many\s+(\w+)/i.exec(line);
-    if (m) {
-      const [, x, y] = m;
-      addEdge(x, y, "execution produces many");
-      continue;
-    }
-
-    // 8) The execution of a X produces Y
-    m = /^The\s+execution\s+of\s+a\s+(\w+)\s+produces\s+(\w+)/i.exec(line);
-    if (m) {
-      const [, x, y] = m;
-      addEdge(x, y, "execution produces");
-      continue;
-    }
-
-    // 9) A X produces many Y
-    m = /^A\s+(\w+)\s+produces\s+many\s+(\w+)/i.exec(line);
-    if (m) {
-      const [, x, y] = m;
-      addEdge(x, y, "produces many");
-      continue;
-    }
-
-    // 10) A X produces Y
-    m = /^A\s+(\w+)\s+produces\s+(\w+)/i.exec(line);
-    if (m) {
-      const [, x, y] = m;
-      addEdge(x, y, "produces");
-      continue;
-    }
-
-    // If nothing matched, just register any capitalized token as nodes
-    // so typos don't kill the parser completely.
-    console.warn("[conceptGraph] Unrecognized line:", line);
   }
 
   return {

@@ -15,84 +15,96 @@ import LeftSidebar from "./components/LeftSidebar";
 import ADRSidebar from "./components/ADRSidebar";
 import RFModelGraphView from "./components/RFModelGraphView";
 import ConceptGraphView from "./components/ConceptGraphView";
-import ADRViewer from "./components/ADRViewer";
+import DocViewer from "./components/DocViewer";
+import CollapsibleSidebar from "./components/shared/CollapsibleSidebar";
+import ThemeSwitcher from "./components/ThemeSwitcher";
 import ApiClient from "./lib/ApiClient";
+import { readUrlState, useUrlState } from "./hooks/useUrlState";
+import { useWebSocket } from "./hooks/useWebSocket";
 
-const api = ApiClient; // shared API client
-
-// API base from Vite env: VITE_API_BASE_URL=http://localhost:3000
-const RAW_BASE = import.meta.env.VITE_API_BASE_URL || "";
-const API_BASE = RAW_BASE.replace(/\/$/, "");
-
-const theme = createTheme({
-  palette: {
-    mode: "light",
-    background: {
-      default: "#f3f4f6",
-      paper: "#ffffff",
-    },
-  },
-  typography: {
-    fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-  },
-});
+const api = ApiClient;
 
 export default function App() {
-  // Read initial state from URL params
-  const params = new URLSearchParams(window.location.search);
-  const initialMode = params.get('mode') || 'concepts';
-  const initialModel = params.get('model');
-  const initialConcept = params.get('concept');
-  const initialAdr = params.get('adr');
-  const initialLayout = params.get('layout') || 'hierarchical';
-  const initialGroupDomains = params.get('groupDomains') !== 'false'; // default true
-  const initialViewMode = params.get('viewMode') || 'graph'; // 'graph' or 'table'
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    const saved = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    return saved;
+  });
 
-  const [leftMode, setLeftMode] = useState(initialMode); // 'models' | 'concepts' | 'adrs'
-  // main view is controlled by the left-mode switcher now
+  const theme = createTheme({
+    palette: {
+      mode: (currentTheme === 'light' || currentTheme === 'paper') ? 'light' : 'dark',
+      background: 
+        currentTheme === 'light' ? { default: "#f3f4f6", paper: "#ffffff" } :
+        currentTheme === 'paper' ? { default: "#fafaf8", paper: "#f5f5f0" } :
+        currentTheme === 'dark' ? { default: "#121212", paper: "#1e1e1e" } :
+        currentTheme === 'purple' ? { default: "#1a0933", paper: "#240046" } :
+        currentTheme === 'dracula' ? { default: "#282a36", paper: "#383a59" } :
+        currentTheme === 'dos' ? { default: "#0000aa", paper: "#000088" } :
+        currentTheme === 'green' ? { default: "#001100", paper: "#002200" } :
+        { default: "#121212", paper: "#1e1e1e" },
+      divider: 
+        currentTheme === 'light' ? '#e5e7eb' :
+        currentTheme === 'paper' ? '#e0ddd5' :
+        currentTheme === 'dark' ? '#333333' :
+        currentTheme === 'purple' ? '#5a189a' :
+        currentTheme === 'dracula' ? '#44475a' :
+        currentTheme === 'dos' ? '#0000ff' :
+        currentTheme === 'green' ? '#003300' :
+        '#333333',
+      ...(currentTheme === 'paper' && {
+        text: { 
+          primary: '#3e2723', 
+          secondary: '#6d4c41' 
+        },
+        primary: { 
+          main: '#795548', 
+          light: '#a1887f', 
+          dark: '#5d4037' 
+        },
+      }),
+    },
+    typography: {
+      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+    },
+  });
+
+  const handleThemeChange = (newTheme) => {
+    setCurrentTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
+  // Read initial state from URL params
+  const {
+    initialMode,
+    initialModel,
+    initialConcept,
+    initialDoc,
+    initialLayout,
+    initialGroupDomains,
+    initialViewMode
+  } = readUrlState();
+
+  const [leftMode, setLeftMode] = useState(initialMode);
   const [fileIndex, setFileIndex] = useState({
     jsonModels: [],
     markdown: [],
     concepts: [],
   });
 
-  const [adrs, setAdrs] = useState([]);
+  const [docs, setDocs] = useState([]);
 
-  const [selectedModelKey, setSelectedModelKey] = useState(initialModel); // `${domain}:${model}`
+  const [selectedModelKey, setSelectedModelKey] = useState(initialModel);
   const [selectedConceptPath, setSelectedConceptPath] = useState(initialConcept);
-  const [selectedADRPath, setSelectedADRPath] = useState(initialAdr);
+  const [selectedDocPath, setSelectedDocPath] = useState(initialDoc);
   
-  // Model graph options
-  const [layoutStyle, setLayoutStyle] = useState(initialLayout); // 'star' | 'force' | 'hierarchical'
+  const [layoutStyle, setLayoutStyle] = useState(initialLayout);
   const [groupByDomains, setGroupByDomains] = useState(initialGroupDomains);
-  const [viewMode, setViewMode] = useState(initialViewMode); // 'graph' | 'table'
+  const [viewMode, setViewMode] = useState(initialViewMode);
 
   const [filesError, setFilesError] = useState("");
-  
-  // WebSocket for live reload
-  const wsRef = useRef(null);
 
   // Sync URL with state changes
-  useEffect(() => {
-    const params = new URLSearchParams();
-    params.set('mode', leftMode);
-    
-    if (leftMode === 'models') {
-      params.set('layout', layoutStyle);
-      params.set('groupDomains', groupByDomains.toString());
-      params.set('viewMode', viewMode);
-      if (selectedModelKey) {
-        params.set('model', selectedModelKey);
-      }
-    } else if (leftMode === 'concepts' && selectedConceptPath) {
-      params.set('concept', selectedConceptPath);
-    } else if (leftMode === 'adrs' && selectedADRPath) {
-      params.set('adr', selectedADRPath);
-    }
-    
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
-    window.history.replaceState({}, '', newUrl);
-  }, [leftMode, selectedModelKey, selectedConceptPath, selectedADRPath, layoutStyle, groupByDomains, viewMode]);
+  useUrlState(leftMode, selectedModelKey, selectedConceptPath, selectedDocPath, layoutStyle, groupByDomains, viewMode);
 
   // -------- Fetch /files once ----------
   const loadFiles = useCallback(async () => {
@@ -117,15 +129,15 @@ export default function App() {
 
   // -------- Fetch /adrs once ----------
   useEffect(() => {
-    async function loadADRs() {
+    async function loadDocs() {
       try {
         const data = await api.fetchADRs();
-        setAdrs(data.adrs || []);
+        setDocs(data.adrs || []);
       } catch (err) {
         console.error("[App] Failed to load /adrs:", err);
       }
     }
-    loadADRs();
+    loadDocs();
   }, []);
 
   // -------- Handle JSON file click (resolve to `${domain}:${model}`) ----------
@@ -187,50 +199,14 @@ export default function App() {
     setLeftMode("concepts");
   }, []);
 
-  // -------- Handle ADR click ----------
-  const handleADRClick = useCallback((filePath) => {
-    console.log("[App] Selecting ADR:", filePath);
-    setSelectedADRPath(filePath);
+  // -------- Handle doc click ----------
+  const handleDocClick = useCallback((filePath) => {
+    console.log("[App] Selecting doc:", filePath);
+    setSelectedDocPath(filePath);
   }, []);
 
-  // tabs removed — left-mode controls the main view
-  
-  // -------- WebSocket connection for live reload ----------
-  useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = API_BASE ? `${protocol}//${new URL(API_BASE).host}` : `${protocol}//${window.location.host}`;
-    
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-    
-    ws.onopen = () => {
-      console.log('[WebSocket] Connected for live reload');
-    };
-    
-    ws.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        if (message.type === 'reload') {
-          console.log('[WebSocket] File change detected, reloading data...');
-          loadFiles();
-        }
-      } catch (err) {
-        console.error('[WebSocket] Error parsing message:', err);
-      }
-    };
-    
-    ws.onerror = (error) => {
-      console.error('[WebSocket] Error:', error);
-    };
-    
-    ws.onclose = () => {
-      console.log('[WebSocket] Disconnected');
-    };
-    
-    return () => {
-      ws.close();
-    };
-  }, [loadFiles, API_BASE]);
+  // WebSocket connection for live reload
+  useWebSocket(loadFiles);
 
   return (
     <ThemeProvider theme={theme}>
@@ -239,10 +215,10 @@ export default function App() {
         {/* Top bar */}
         <AppBar position="static" elevation={1} color="default">
           <Toolbar sx={{ gap: 2 }}>
-            <Typography variant="h6" sx={{ flexShrink: 0 }}>
+            <Typography variant="h6" sx={{ flexShrink: 0, flexGrow: 1 }}>
               Schema & Concept Explorer
             </Typography>
-            {/* The model/concept selector moved to the left sidebar */}
+            <ThemeSwitcher currentTheme={currentTheme} onThemeChange={handleThemeChange} />
           </Toolbar>
         </AppBar>
 
@@ -260,50 +236,40 @@ export default function App() {
               mode={leftMode}
               onChange={(mode) => {
                 setLeftMode(mode);
+                // Clear selections when switching modes
+                setSelectedModelKey(null);
+                setSelectedConceptPath(null);
+                setSelectedDocPath(null);
               }}
             />
 
-            <Box
-              sx={{
-                width: leftMode === "adrs" ? "auto" : 260,
-                minWidth: 260,
-                maxWidth: leftMode === "adrs" ? 600 : 260,
-                bgcolor: "background.paper",
-                display: "flex",
-                flexDirection: "column",
-                minHeight: 0,
-                borderLeft: "1px solid #4a4a4a",
-              }}
+            <CollapsibleSidebar
+              defaultExpanded={true}
+              minWidth={260}
+              maxWidth={leftMode === "docs" ? 600 : 600}
+              defaultWidth={leftMode === "docs" ? 400 : 260}
+              title={leftMode === "models" ? "Models" : leftMode === "concepts" ? "Concepts" : "Docs"}
             >
-            <Box sx={{ p: 1 }}>
-              <Typography
-                variant="caption"
-                sx={{ textTransform: "uppercase", color: "text.secondary" }}
-              >
-                {leftMode === "models" ? "Models" : leftMode === "concepts" ? "Concepts" : "ADRs"}
-              </Typography>
-            </Box>
-            <Divider />
-            {filesError ? (
-              <Box sx={{ p: 1, color: "error.main", fontSize: 12 }}>
-                {filesError}
-              </Box>
-            ) : leftMode === "adrs" ? (
-              <ADRSidebar
-                adrs={adrs}
-                selectedPath={selectedADRPath}
-                onADRClick={handleADRClick}
-              />
-            ) : (
-              <LeftSidebar
-                fileIndex={fileIndex}
-                selectedModelKey={selectedModelKey}
-                onJsonFileClick={handleJsonFileClick}
-                onConceptFileClick={handleConceptFileClick}
-                viewMode={leftMode === "models" ? "models" : leftMode === "concepts" ? "concepts" : "all"}
-              />
-            )}
-            </Box>
+              {filesError ? (
+                <Box sx={{ p: 1, color: "error.main", fontSize: 12 }}>
+                  {filesError}
+                </Box>
+              ) : leftMode === "docs" ? (
+                <ADRSidebar
+                  adrs={docs}
+                  selectedPath={selectedDocPath}
+                  onADRClick={handleDocClick}
+                />
+              ) : (
+                <LeftSidebar
+                  fileIndex={fileIndex}
+                  selectedModelKey={selectedModelKey}
+                  onJsonFileClick={handleJsonFileClick}
+                  onConceptFileClick={handleConceptFileClick}
+                  viewMode={leftMode === "models" ? "models" : leftMode === "concepts" ? "concepts" : "all"}
+                />
+              )}
+            </CollapsibleSidebar>
           </Box>
 
           {/* Main graph view */}
@@ -338,7 +304,7 @@ export default function App() {
             ) : leftMode === "concepts" ? (
               <ConceptGraphView conceptPath={selectedConceptPath} />
             ) : (
-              <ADRViewer selectedPath={selectedADRPath} />
+              <DocViewer selectedPath={selectedDocPath} />
             )}
           </Box>
         </Box>

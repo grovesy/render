@@ -1,12 +1,7 @@
 // src/components/ADRSidebar.jsx
-import React from "react";
-import {
-  Box,
-  List,
-  ListItemButton,
-  ListSubheader,
-  Typography,
-} from "@mui/material";
+import React, { useMemo } from "react";
+import { Box } from "@mui/material";
+import TreeView from "./shared/TreeView";
 
 function groupByDir(files) {
   const groups = {};
@@ -20,60 +15,36 @@ function groupByDir(files) {
   return groups;
 }
 
+function buildADRTree(adrGroups) {
+  const tree = {};
+  
+  Object.entries(adrGroups).forEach(([dir, files]) => {
+    tree[dir] = {
+      children: {},
+      items: files,
+      fullPath: dir
+    };
+  });
+  
+  return tree;
+}
+
 export default function ADRSidebar({ adrs, selectedPath, onADRClick }) {
-  const adrGroups = groupByDir(adrs);
+  const adrTree = useMemo(() => {
+    const groups = groupByDir(adrs);
+    return buildADRTree(groups);
+  }, [adrs]);
 
   return (
     <Box sx={{ flex: 1, overflowY: "auto" }}>
-      <List
-        dense
-        subheader={
-          <ListSubheader
-            component="div"
-            sx={{
-              bgcolor: "background.paper",
-              textTransform: "uppercase",
-              fontSize: 11,
-              letterSpacing: "0.08em",
-              color: "text.secondary",
-            }}
-          >
-            Architecture Decision Records
-          </ListSubheader>
-        }
-      >
-        {Object.keys(adrGroups).length === 0 && (
-          <Typography
-            variant="caption"
-            sx={{ px: 2, py: 1, color: "text.disabled" }}
-          >
-            No ADR files found
-          </Typography>
-        )}
-        {Object.entries(adrGroups).map(([dir, files]) => (
-          <Box key={dir}>
-            <Typography
-              variant="caption"
-              sx={{ px: 2, pt: 1, pb: 0.5, color: "text.secondary" }}
-            >
-              {dir}
-            </Typography>
-            {files.map((f) => (
-              <ListItemButton
-                key={f.path}
-                dense
-                selected={selectedPath === f.path}
-                sx={{ pl: 3 }}
-                onClick={() => onADRClick(f.path)}
-              >
-                <Typography variant="body2" sx={{ fontSize: 13, whiteSpace: "nowrap" }}>
-                  {f.name}
-                </Typography>
-              </ListItemButton>
-            ))}
-          </Box>
-        ))}
-      </List>
+      <TreeView
+        tree={adrTree}
+        selectedItemId={selectedPath}
+        onItemClick={(item) => onADRClick(item.path)}
+        getItemId={(item) => item.path}
+        renderItem={(item) => item.name}
+        emptyMessage="No ADR files found"
+      />
     </Box>
   );
 }

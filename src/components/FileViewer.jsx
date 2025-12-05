@@ -36,7 +36,7 @@ export default function FileViewer({ selectedFile, content, loading }) {
       sx={{
         flex: 1,
         overflow: "auto",
-        bgcolor: "#ffffff",
+        bgcolor: 'background.paper',
         p: 1.5,
         fontFamily:
           'SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
@@ -49,7 +49,7 @@ export default function FileViewer({ selectedFile, content, loading }) {
         </Box>
       )}
       {!loading && !selectedFile && (
-        <Box sx={{ color: "#6b7280" }}>Select a file from the navigator…</Box>
+        <Box sx={{ color: 'text.secondary' }}>Select a file from the navigator…</Box>
       )}
       {!loading && selectedFile && (
         <>
